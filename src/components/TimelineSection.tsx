@@ -46,11 +46,21 @@ export default function TimelineSection() {
 
           if (i > 0) {
             tl.to(items[i - 1], { opacity: 0.3, duration: fade }, enter - fade);
-            tl.to(panels[i - 1], { opacity: 0, y: 16, duration: fade }, enter - fade);
+            tl.to(panels[i - 1], { opacity: 0, y: 16, yPercent: -50, duration: fade }, enter - fade);
           }
 
           tl.to(item, { opacity: 1, duration: fade }, enter);
-          tl.fromTo(panels[i], { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: fade }, enter);
+
+          if (i > 0) {
+            tl.fromTo(
+              panels[i],
+              { opacity: 0, y: 16, yPercent: -50 },
+              { opacity: 1, y: 0, yPercent: -50, duration: fade },
+              enter
+            );
+          } else {
+            tl.fromTo(panels[i], { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: fade }, enter);
+          }
         });
 
         const line = sectionRef.current?.querySelector<HTMLElement>(".timeline-line");
