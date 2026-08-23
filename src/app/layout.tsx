@@ -1,8 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Noto_Sans_SC } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import TransitionProvider from "@/lib/TransitionContext";
+import AppScroll from "@/components/AppScroll";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -53,10 +52,9 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen flex flex-col">
-        <TransitionProvider>
-          <Navbar />
+        <AppScroll>
           <main className="flex-1">{children}</main>
-        </TransitionProvider>
+        </AppScroll>
       </body>
     </html>
   );

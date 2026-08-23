@@ -1,159 +1,142 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
+import React, { useEffect, useRef } from "react";
+import { motion, useScroll, useTransform } from "motion/react";
 
-gsap.registerPlugin(ScrollTrigger);
+export interface HeroSectionProps {
+  topWord?: string;
+  rightWord?: string;
+  bottomWord?: string;
+  accentColor?: string;
+  textColor?: string;
+  backgroundColor?: string;
+  className?: string;
+}
 
-export default function HeroSection() {
-  const [phase, setPhase] = useState<"startup" | "hero">("startup");
+const HeroSection: React.FC<HeroSectionProps> = ({
+  topWord = "creating",
+  rightWord = "your",
+  bottomWord = "story",
+  accentColor = "#f97316",
+  textColor = "#000000",
+  backgroundColor = "#fafafa",
+  className = "",
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
-  const sectionRef = useRef<HTMLElement>(null);
-  const heroContentRef = useRef<HTMLDivElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const vignetteRef = useRef<HTMLDivElement>(null);
-  const glowRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end start"],
+  });
 
-  const startupRef = useRef<HTMLDivElement>(null);
-  const lineRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const overlay = startupRef.current;
-    const line = lineRef.current;
-    if (!overlay || !line) return;
-
-    const ctx = gsap.context(() => {
-      gsap.set(overlay, { scaleY: 0.005, transformOrigin: "center center", opacity: 1 });
-      gsap.set(line, { scaleX: 0, opacity: 0, transformOrigin: "center" });
-
-      const tl = gsap.timeline({
-        onComplete: () => setPhase("hero"),
-      });
-
-      tl.to(line, { scaleX: 1, opacity: 1, duration: 0.25, ease: "power2.out" })
-        .to(overlay, { scaleY: 1, duration: 0.35, ease: "power2.inOut" }, "-=0.1")
-        .to(overlay, { opacity: 0.6, duration: 0.04 })
-        .to(overlay, { opacity: 1, duration: 0.04 })
-        .to(overlay, { opacity: 0.7, duration: 0.03 })
-        .to(overlay, { opacity: 1, duration: 0.05 })
-        .to(overlay, { opacity: 0, duration: 0.25, ease: "power2.out" });
-    });
-
-    return () => ctx.revert();
-  }, []);
+  const videoScale = useTransform(scrollYProgress, [0, 0.8], [1, 1.7]);
+  const videoBorderRadius = useTransform(scrollYProgress, [0, 0.5], [20, 0]);
+  const textY = useTransform(scrollYProgress, [0, 0.4], [0, -120]);
+  const textOpacity = useTransform(scrollYProgress, [0, 0.35], [1, 0]);
 
   useEffect(() => {
-    if (phase !== "hero") return;
+    const video = videoRef.current;
+    if (!video) return;
 
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        heroContentRef.current,
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }
-      );
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      },
+      { threshold: 0.1 }
+    );
 
-      gsap.to(scrollRef.current, { opacity: 1, duration: 0.4, delay: 0.3 });
-      gsap.to(scrollRef.current, {
-        opacity: 0.3,
-        duration: 1.5,
-        repeat: -1,
-        yoyo: true,
-        ease: "power1.inOut",
-        delay: 0.7,
-      });
-    });
-
-    return () => ctx.revert();
-  }, [phase]);
-
-  useEffect(() => {
-    const section = sectionRef.current;
-    if (!section) return;
-
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: section,
-          start: "top top",
-          end: "bottom top",
-          scrub: true,
-        },
-      });
-      tl.to([vignetteRef.current, glowRef.current], {
-        opacity: 0,
-        duration: 0.65,
-      }, 0.3);
-    });
-
-    return () => ctx.revert();
+    observer.observe(video);
+    return () => observer.disconnect();
   }, []);
 
   return (
-    <section
-      ref={sectionRef}
-      className="hero-tv min-h-[100dvh] flex flex-col items-center justify-center px-6 relative overflow-hidden"
+    <div
+      className={`relative w-full ${className}`}
+      style={{ background: backgroundColor }}
     >
-      <div
-        ref={vignetteRef}
-        className="absolute inset-0 z-1 pointer-events-none"
-        style={{
-          background: "radial-gradient(ellipse at center, transparent 50%, rgba(8, 30, 50, 0.65) 100%)",
-        }}
-      />
-      <div
-        ref={glowRef}
-        className="absolute inset-0 z-1 pointer-events-none"
-        style={{
-          boxShadow: "inset 0 0 80px rgba(0, 150, 255, 0.06), inset 0 0 150px rgba(0, 100, 200, 0.03)",
-        }}
-      />
-      <div
-        ref={startupRef}
-        className="absolute inset-0 z-20 pointer-events-none bg-black overflow-hidden"
+      <section
+        ref={containerRef}
+        className="relative h-[200vh] min-h-[800px] w-full select-none"
       >
-        <div
-          ref={lineRef}
-          className="absolute top-1/2 left-0 right-0 h-[2px] -translate-y-1/2 bg-white opacity-0"
-          style={{
-            boxShadow:
-              "0 0 8px rgba(255,255,255,0.9), 0 0 30px rgba(100,200,255,0.5)",
-          }}
-        />
-      </div>
+        <div className="sticky top-0 h-screen w-full overflow-hidden">
+          <motion.div
+            className="absolute z-20 overflow-hidden"
+            style={{
+              top: "20%",
+              bottom: "20%",
+              left: "15%",
+              right: "15%",
+              scale: videoScale,
+              borderRadius: videoBorderRadius,
+            }}
+          >
+            <video
+              ref={videoRef}
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="w-full h-full object-cover"
+            >
+              <source src="/hero.webm" type="video/webm" />
+              <source src="/hero.mp4" type="video/mp4" />
+            </video>
+          </motion.div>
 
-      {phase === "hero" && (
-        <div
-          ref={heroContentRef}
-          className="flex flex-col items-center opacity-0 relative z-10"
-        >
-          <h1 className="macro text-[clamp(2.5rem,8vw,8rem)] text-foreground text-center max-w-5xl leading-[1.15] tracking-[-0.04em]">
-            从镜头后的创作者
-            <br />
-            到团队前的管理者
-          </h1>
-          <p className="micro text-muted mt-6 max-w-xl text-center leading-relaxed">
-            现负责游戏留学行业视频内容体系搭建
-          </p>
+          <motion.div
+            className="absolute inset-0 z-30 pointer-events-none flex flex-col justify-between"
+            style={{ y: textY, opacity: textOpacity }}
+          >
+            <div className="absolute top-[3%] inset-x-0 flex justify-center">
+              <span
+                className="font-black tracking-tighter leading-none select-none text-center"
+                style={{
+                  color: accentColor,
+                  fontSize: "clamp(3.5rem, 11vw, 11rem)",
+                  fontFamily:
+                    "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                }}
+              >
+                {topWord}
+              </span>
+            </div>
+
+            <div className="absolute right-[5%] top-[40%] flex items-center">
+              <span
+                className="font-black tracking-tighter leading-none select-none"
+                style={{
+                  color: textColor,
+                  fontSize: "clamp(3.5rem, 11vw, 11rem)",
+                  fontFamily:
+                    "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                }}
+              >
+                {rightWord}
+              </span>
+            </div>
+
+            <div className="absolute bottom-[3%] inset-x-0 flex justify-center">
+              <span
+                className="font-normal italic leading-none select-none text-center"
+                style={{
+                  color: accentColor,
+                  fontSize: "clamp(4rem, 14vw, 13rem)",
+                  fontFamily: "Georgia, 'Times New Roman', Cambria, serif",
+                }}
+              >
+                {bottomWord}
+              </span>
+            </div>
+          </motion.div>
         </div>
-      )}
-
-      <div
-        className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none z-10"
-        style={{
-          background:
-            "linear-gradient(to bottom, transparent 0%, rgba(0,150,255,0.07) 40%, rgba(0,100,200,0.03) 70%, transparent 100%)",
-        }}
-      />
-
-      <div
-        ref={scrollRef}
-        className="absolute bottom-8 micro text-muted opacity-0 flex items-center gap-2 z-10"
-      >
-        <span>{`///`}</span>
-        <span>SCROLL TO EXPLORE</span>
-        <span>{`///`}</span>
-      </div>
-    </section>
+      </section>
+    </div>
   );
-}
+};
+
+export default HeroSection;

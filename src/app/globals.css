@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@theme inline {
+@theme {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-zh: var(--font-noto-sans-sc);
@@ -8,10 +8,17 @@
   --color-background: #0A0A0A;
   --color-foreground: #EAEAEA;
   --color-muted: #666666;
+  --color-muted-foreground: #999999;
   --color-border: #1A1A1A;
   --color-surface: #121212;
-  --color-accent: #E61919;
-  --color-accent-dim: rgba(230, 25, 25, 0.1);
+  --color-card: #161616;
+  --color-card-foreground: #EAEAEA;
+  --color-primary: #f97316;
+  --color-primary-foreground: #ffffff;
+  --color-popover: #161616;
+  --color-popover-foreground: #EAEAEA;
+  --color-accent: #f97316;
+  --color-accent-dim: rgba(249, 115, 22, 0.1);
   --color-accent-green: #4AF626;
 
   --z-dropdown: 40;
@@ -34,74 +41,17 @@ body {
   overflow-x: hidden;
 }
 
-*, *::before, *::after {
-  border-radius: 0 !important;
-}
-
-#scanline {
-  position: fixed;
-  inset: 0;
-  z-index: 30;
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0, 0, 0, 0.08) 2px,
-    rgba(0, 0, 0, 0.08) 4px
-  );
-}
-
-.noise-overlay {
-  position: relative;
-  contain: layout style paint;
-}
-
-.noise-overlay::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E"),
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0, 0, 0, 0.03) 2px,
-      rgba(0, 0, 0, 0.03) 4px
-    );
-  pointer-events: none;
-  background-blend-mode: overlay;
-  will-change: transform;
-  animation: scanline 8s linear infinite;
-}
-
-.skill-item {
-  scale: 0.85;
-  opacity: 0.35;
-  transition: none !important;
-}
-
-.skill-item.active {
-  scale: 1;
-  opacity: 1;
-}
-
-@keyframes scanline {
-  to {
-    transform: translateY(4px);
-  }
-}
 
 @keyframes pulse-resume {
   0%, 100% {
     transform: scale(1);
-    text-shadow: 0 0 0 rgba(230, 25, 25, 0);
+    text-shadow: 0 0 0 rgba(249, 115, 22, 0);
   }
   50% {
     transform: scale(1.045);
     text-shadow:
-      0 0 18px rgba(230, 25, 25, 0.55),
-      0 0 36px rgba(230, 25, 25, 0.25);
+      0 0 18px rgba(249, 115, 22, 0.55),
+      0 0 36px rgba(249, 115, 22, 0.25);
   }
 }
 
@@ -116,7 +66,7 @@ body {
   inset: 0;
   background: radial-gradient(
     circle at center,
-    rgba(230, 25, 25, 0.08) 0%,
+    rgba(249, 115, 22, 0.08) 0%,
     transparent 70%
   );
   opacity: 0;
@@ -129,13 +79,33 @@ body {
 }
 
 .download-resume-btn:hover .animate-pulse-resume {
-  color: #ff3838;
+  color: #fb923c;
 }
 
 .social-icon-wrap svg {
   width: 100%;
   height: 100%;
   display: block;
+}
+
+@keyframes contact-breathe-tab {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(1);
+    color: var(--color-foreground);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+    color: var(--color-accent);
+  }
+}
+
+.contact-breathe-accent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  animation: contact-breathe-tab 2.4s ease-in-out infinite;
 }
 
 ::selection {
@@ -158,51 +128,6 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-muted);
 }
-
-.hero-tv {
-  position: relative;
-}
-
-.about-thumb-wrap {
-  position: absolute;
-  cursor: pointer;
-  pointer-events: auto;
-  z-index: 5;
-}
-.about-thumb-wrap.active {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.about-thumb-img {
-  display: block;
-  max-width: 100px;
-  height: auto;
-  pointer-events: none;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  transform-origin: center center;
-  backface-visibility: hidden;
-}
-
-.about-full-img {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  max-width: 80%;
-  max-height: 80%;
-  object-fit: contain;
-  z-index: 20;
-  pointer-events: none;
-  opacity: 0;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  backface-visibility: hidden;
-}
-.about-full-img.active {
-  opacity: 1;
-  pointer-events: auto;
-}
-
 
 
 @media (prefers-reduced-motion: reduce) {

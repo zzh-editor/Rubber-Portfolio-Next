@@ -2,13 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import TransitionLink from "@/components/TransitionLink";
 import ProjectOverlay from "@/components/ProjectOverlay";
 import { projectsPage, galleryItems } from "@/data/projects";
-
-gsap.registerPlugin(ScrollTrigger);
 
 type Tab = "videos" | "photos";
 
@@ -18,10 +13,7 @@ type OverlayItem =
 
 export default function ProjectPage() {
   const router = useRouter();
-  const sectionRef = useRef<HTMLDivElement>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Record<number, HTMLDivElement | null>>({});
-  const isFirstRender = useRef(true);
   const [activeTab, setActiveTab] = useState<Tab>("videos");
   const [overlayItem, setOverlayItem] = useState<OverlayItem | null>(null);
 
@@ -49,63 +41,15 @@ export default function ProjectPage() {
     });
   }, [router]);
 
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      ScrollTrigger.batch(".project-card", {
-        onEnter: (batch) => {
-          gsap.set(batch, { willChange: "transform, opacity" });
-          gsap.fromTo(
-            batch,
-            { opacity: 0, y: 40 },
-            { opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: "power3.out", onComplete: () => gsap.set(batch, { willChange: "auto" }) }
-          );
-        },
-        start: "top 88%",
-      });
-
-      ScrollTrigger.batch(".gallery-image", {
-        onEnter: (batch) => {
-          gsap.set(batch, { willChange: "transform, opacity" });
-          gsap.fromTo(
-            batch,
-            { opacity: 0, scale: 0.95 },
-            { opacity: 1, scale: 1, duration: 0.5, stagger: 0.08, ease: "power2.out", onComplete: () => gsap.set(batch, { willChange: "auto" }) }
-          );
-        },
-        start: "top 88%",
-      });
-    }, sectionRef);
-
-    return () => ctx.revert();
-  }, []);
-
-  useEffect(() => {
-    const grid = gridRef.current;
-    if (!grid) return;
-
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-
-    gsap.fromTo(
-      grid.children,
-      { opacity: 0, y: 20 },
-      { opacity: 1, y: 0, duration: 0.4, stagger: 0.05, ease: "power2.out" }
-    );
-
-    ScrollTrigger.refresh();
-  }, [activeTab]);
-
   return (
-    <div ref={sectionRef} className="pt-24 pb-16 px-6">
+    <div className="pt-24 pb-16 px-6">
       <div className="max-w-6xl mx-auto">
-        <TransitionLink
+        <a
           href="/"
           className="micro text-muted hover:text-accent transition-colors inline-flex items-center gap-2 mb-8"
         >
           {`<<< BACK`}
-        </TransitionLink>
+        </a>
 
         <h1 className="macro text-[clamp(2rem,5vw,5rem)] mb-2">{projectsPage.title}</h1>
         <p className="micro text-muted mb-16 max-w-xl">{projectsPage.description}</p>
@@ -130,13 +74,12 @@ export default function ProjectPage() {
         </div>
 
         {activeTab === "videos" && (
-          <div ref={gridRef} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-0 border-2 border-foreground">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-0 border-2 border-foreground">
             {projectsPage.items.map((project) => (
               <div
                 key={project.id}
                 ref={(el) => { cardRefs.current[project.id] = el; }}
                 className="project-card block border-r border-b border-foreground hover:bg-accent-dim transition-colors last:border-r-0 cursor-pointer"
-                style={{ opacity: 0 }}
                 onClick={() =>
                   setOverlayItem({
                     type: "video",
@@ -162,12 +105,11 @@ export default function ProjectPage() {
         )}
 
         {activeTab === "photos" && (
-          <div ref={gridRef} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-0 border-2 border-foreground">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-0 border-2 border-foreground">
             {galleryItems.map((item) => (
               <div
                 key={item.id}
                 className="gallery-image block border-r border-b border-foreground hover:bg-accent-dim transition-colors last:border-r-0 cursor-pointer"
-                style={{ opacity: 0 }}
                 onClick={() =>
                   setOverlayItem({
                     type: "image",

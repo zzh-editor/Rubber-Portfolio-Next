@@ -73,7 +73,7 @@ export const workExperience = {
     },
     {
       icon: "Music" as const,
-      title: "此刻霓虹（NEONOW）",
+      title: "此刻霓虹",
       period: "2024-2025",
       role: "内容策划",
       tags: ["内容策划", "文案撰写", "素材检索", "剪辑包装"],
@@ -105,7 +105,7 @@ export const workExperience = {
     },
     {
       icon: "Briefcase" as const,
-      title: "其它经历",
+      title: "其它",
       period: "2017 - 2022",
       role: "自由摄影师 / 咖啡师 / 摄影助理",
       description: "早期从事摄影、咖啡行业，完成从执行到管理的原始积累。",
