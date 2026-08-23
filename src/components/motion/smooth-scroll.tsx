@@ -12,6 +12,7 @@ import {
   useMemo,
   useRef,
 } from "react";
+import { useHoverCapable } from "@/lib/hooks/use-hover-capable";
 
 // Lenis' own expo-out curve — the canonical smooth-scroll easing. Kept as a
 // named local fn (not a lib/ease token) because tokens are bezier control
@@ -158,6 +159,8 @@ export function SmoothScroll({
   className,
 }: SmoothScrollProps) {
   const reduce = useReducedMotion();
+  const canHover = useHoverCapable();
+  const useNative = reduce || !canHover;
   const scrollY = useMotionValue(0);
   const progress = useMotionValue(0);
   const velocity = useMotionValue(0);
@@ -172,7 +175,7 @@ export function SmoothScroll({
   const scrollTo = useCallback(
     (target: ScrollTarget, options?: ScrollToOptions) => {
       const lenis = lenisRef.current;
-      if (lenis && !reduce) {
+      if (lenis && !useNative) {
         lenis.scrollTo(target, {
           offset: options?.offset,
           duration: options?.duration,
@@ -181,23 +184,23 @@ export function SmoothScroll({
         return;
       }
       const source = nativeSource();
-      const behavior = reduce || options?.immediate ? "auto" : "smooth";
+      const behavior = useNative || options?.immediate ? "auto" : "smooth";
       const top = resolveTop(target, source ?? window, options?.offset);
       (source ?? window).scrollTo({ top, behavior });
     },
-    [reduce, nativeSource],
+    [useNative, nativeSource],
   );
 
-  // Reduced motion drives the native listener; the Lenis path leaves it
-  // disabled and lets LenisBridge feed the values instead.
-  useNativeScrollSync(!!reduce, nativeSource, scrollY, progress, velocity);
+  // Native scroll drives the motion values on mobile / reduced-motion;
+  // the Lenis path leaves it disabled and lets LenisBridge feed them instead.
+  useNativeScrollSync(useNative, nativeSource, scrollY, progress, velocity);
 
   const api = useMemo<SmoothScrollApi>(
     () => ({ lenis: lenisRef.current, scrollY, progress, velocity, scrollTo }),
     [scrollY, progress, velocity, scrollTo],
   );
 
-  if (reduce) {
+  if (useNative) {
     return (
       <SmoothScrollContext.Provider value={api}>
         <div ref={containerRef} className={className}>

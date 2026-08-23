@@ -202,6 +202,7 @@ export function ProjectFolder({
             tabIndex={-1}
             aria-label="Close file overlay"
             onClick={closeOverlay}
+            onTouchMove={(e) => e.preventDefault()}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -220,11 +221,14 @@ export function ProjectFolder({
         aria-modal="true"
         aria-labelledby={dialogTitleId}
         aria-hidden={isExpanded ? undefined : "true"}
-        className="pointer-events-none fixed inset-x-6 inset-y-8 z-50 flex items-start justify-center overflow-y-auto sm:items-center"
+        onClick={(e) => {
+          if (e.target === dialogRef.current) closeOverlay();
+        }}
+        className="fixed inset-x-6 inset-y-8 z-50 flex items-start justify-center overflow-y-auto overscroll-contain sm:items-center"
       >
         <div
           className={cn(
-            "pointer-events-auto relative z-10 w-full max-w-[61rem]",
+            "relative z-10 w-full max-w-[61rem]",
             isClosing && "pointer-events-none",
           )}
         >
@@ -321,6 +325,7 @@ export function ProjectFolder({
           "relative block h-56 w-72 select-none rounded-2xl text-left outline-none [perspective:1200px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}
+        style={{ willChange: "transform" }}
       >
         <motion.span
           aria-hidden="true"

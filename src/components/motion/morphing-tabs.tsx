@@ -729,6 +729,7 @@ export function MorphingTabs({
         classNames?.root,
         className,
       )}
+      style={{ willChange: "transform" }}
     >
       <div className="relative h-20">
         <div

@@ -73,6 +73,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
               right: "15%",
               scale: videoScale,
               borderRadius: videoBorderRadius,
+              willChange: "transform",
             }}
           >
             <video
@@ -90,7 +91,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
 
           <motion.div
             className="absolute inset-0 z-30 pointer-events-none flex flex-col justify-between"
-            style={{ y: textY, opacity: textOpacity }}
+            style={{ y: textY, opacity: textOpacity, willChange: "transform, opacity" }}
           >
             <div className="absolute top-[3%] inset-x-0 flex justify-center">
               <span
