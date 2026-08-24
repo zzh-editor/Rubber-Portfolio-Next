@@ -322,10 +322,10 @@ export function ProjectFolder({
         whileTap={reduce || disabled ? undefined : { scale: 0.98 }}
         transition={reduce ? { duration: 0 } : SPRING_PRESS}
         className={cn(
-          "relative block h-56 w-72 select-none rounded-2xl text-left outline-none [perspective:1200px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
+          "relative block h-40 w-[42vw] max-w-72 sm:h-48 sm:w-60 lg:h-56 lg:w-72 select-none rounded-2xl text-left outline-none [perspective:1200px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}
-        style={{ willChange: "transform" }}
+        style={{ willChange: "transform" } as React.CSSProperties}
       >
         <motion.span
           aria-hidden="true"
@@ -372,7 +372,7 @@ export function ProjectFolder({
                         onLayoutAnimationComplete={() => {
                           if (isClosing && index === 0) finishClose();
                         }}
-                        className="absolute left-0 top-0 -ml-12 block h-40 w-24 overflow-hidden rounded-lg bg-background/45 backdrop-blur-lg"
+                        className="absolute left-0 top-0 -ml-10 sm:-ml-12 block h-28 w-16 sm:h-32 sm:w-20 lg:h-40 lg:w-24 overflow-hidden rounded-lg bg-background/45 backdrop-blur-lg"
                         style={{ zIndex: opened.zIndex }}
                       >
                         {preview.content}

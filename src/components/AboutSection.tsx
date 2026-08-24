@@ -164,8 +164,8 @@ export default function AboutSection() {
   ];
 
   return (
-    <section id="about" className="relative py-32 px-6">
-      <div className="max-w-6xl mx-auto relative z-10">
+    <section id="about" className="relative py-32 px-6 overflow-x-clip">
+      <div className="max-w-6xl mx-auto relative z-10 w-full max-w-full lg:max-w-6xl overflow-hidden">
         <div className="flex flex-col gap-6 mb-10">
           {introduction.map((p, i) =>
             i === 0 ? (
@@ -180,15 +180,15 @@ export default function AboutSection() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] items-start gap-10 lg:gap-16">
-          <div className="flex justify-center">
+        <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] items-start gap-10 lg:gap-16 w-full max-w-full overflow-hidden">
+          <div className="flex justify-center min-w-0">
             <ExpandableTabs
               items={expandableItems}
               defaultValue="technical"
             />
           </div>
 
-          <div className="flex flex-row gap-6 justify-end min-w-0">
+          <div className="flex flex-row gap-3 sm:gap-6 justify-center lg:justify-end min-w-0 max-w-full overflow-hidden">
             <ProjectFolder title="VIDEO" previews={videoPreviews} />
             <ProjectFolder title="PHOTOGRAPHY" previews={photoPreviews} />
           </div>
