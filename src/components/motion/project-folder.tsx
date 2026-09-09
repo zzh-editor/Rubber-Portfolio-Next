@@ -224,11 +224,11 @@ export function ProjectFolder({
         onClick={(e) => {
           if (e.target === dialogRef.current) closeOverlay();
         }}
-        className="fixed inset-x-6 inset-y-8 z-50 flex items-start justify-center overflow-y-auto overscroll-contain sm:items-center"
+        className="pointer-events-none fixed inset-x-6 inset-y-8 z-50 flex items-start justify-center overflow-y-auto sm:items-center"
       >
         <div
           className={cn(
-            "relative z-10 w-full max-w-[61rem]",
+            "pointer-events-auto relative z-10 w-full max-w-[61rem]",
             isClosing && "pointer-events-none",
           )}
         >
@@ -271,7 +271,7 @@ export function ProjectFolder({
                     key={preview.id}
                     layoutId={`file-${preview.id}`}
                     transition={transition}
-                    className="aspect-[3/4] w-full max-w-40 overflow-hidden rounded-xl bg-background/50 backdrop-blur-xl"
+                    className="aspect-[3/4] w-full max-w-40 overflow-hidden rounded-xl border border-foreground/10 bg-background/50 backdrop-blur-xl"
                   >
                     {preview.content}
                   </motion.div>
@@ -325,7 +325,6 @@ export function ProjectFolder({
           "relative block h-40 w-[42vw] max-w-72 sm:h-48 sm:w-60 lg:h-56 lg:w-72 select-none rounded-2xl text-left outline-none [perspective:1200px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}
-        style={{ willChange: "transform" } as React.CSSProperties}
       >
         <motion.span
           aria-hidden="true"
@@ -338,7 +337,10 @@ export function ProjectFolder({
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
         >
-          <span className="absolute left-1/2 top-0 block h-0 w-0">
+          {/* Folder 在移动端用 42vw 收窄以并排放两个；扇面按断点等比缩放，
+              保证 5 张预览卡（beui 桌面尺寸 h-40 w-24）缩到 folder 宽度内不被裁。
+              桌面 lg 起 scale-100，几何与 beui 参考完全一致。 */}
+          <span className="absolute left-1/2 top-0 block h-0 w-0 origin-center scale-[0.5] sm:scale-75 lg:scale-100">
             <AnimatePresence initial={false}>
               {!isExpanded
                   ? previewItems.map((preview, index) => {
@@ -372,7 +374,7 @@ export function ProjectFolder({
                         onLayoutAnimationComplete={() => {
                           if (isClosing && index === 0) finishClose();
                         }}
-                        className="absolute left-0 top-0 -ml-10 sm:-ml-12 block h-28 w-16 sm:h-32 sm:w-20 lg:h-40 lg:w-24 overflow-hidden rounded-lg bg-background/45 backdrop-blur-lg"
+                        className="absolute left-0 top-0 -ml-12 block h-28 w-24 sm:h-32 sm:w-24 lg:h-40 lg:w-24 overflow-hidden rounded-lg border border-foreground/10 bg-background/45 backdrop-blur-lg"
                         style={{ zIndex: opened.zIndex }}
                       >
                         {preview.content}

@@ -30,7 +30,7 @@
 html {
   background: var(--color-background);
   min-height: 100dvh;
-  scroll-behavior: initial;
+  scroll-behavior: smooth;
   overflow-x: clip;
   max-width: 100%;
   overscroll-behavior-x: none;
@@ -101,6 +101,27 @@ body {
 ::selection {
   background: var(--color-accent);
   color: var(--color-foreground);
+}
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) #fafafa;
+}
+
+html::-webkit-scrollbar {
+  width: 6px;
+}
+
+html::-webkit-scrollbar-track {
+  background: #fafafa;
+}
+
+html::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+}
+
+html::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted);
 }
 
 ::-webkit-scrollbar {

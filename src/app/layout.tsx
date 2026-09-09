@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Noto_Sans_SC } from "next/font/google";
 import "./globals.css";
-import AppScroll from "@/components/AppScroll";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -52,9 +51,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen flex flex-col">
-        <AppScroll>
-          <main className="flex-1">{children}</main>
-        </AppScroll>
+        <main className="flex-1">{children}</main>
       </body>
     </html>
   );

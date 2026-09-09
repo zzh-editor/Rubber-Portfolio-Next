@@ -32,8 +32,8 @@ const HeroSection: React.FC<HeroSectionProps> = ({
     offset: ["start start", "end start"],
   });
 
-  const videoScaleDesktop = useTransform(scrollYProgress, [0, 0.8], [1, 1.7]);
-  const videoScaleMobile = useTransform(scrollYProgress, [0, 0.8], [1, 1.35]);
+  const videoScaleDesktop = useTransform(scrollYProgress, [0, 0.5], [1, 1.7]);
+  const videoScaleMobile = useTransform(scrollYProgress, [0, 0.5], [1, 1.8]);
   const videoScale = canHover ? videoScaleDesktop : videoScaleMobile;
   const videoBorderRadiusDesktop = useTransform(scrollYProgress, [0, 0.5], [20, 0]);
   // 移动端固定圆角，不做 borderRadius 动画（paint 开销大）
