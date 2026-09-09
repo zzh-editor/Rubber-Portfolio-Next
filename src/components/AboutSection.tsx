@@ -230,7 +230,7 @@ const ContactContent = ({ showToast }: { showToast: (input: { title: string; sta
             href={item.behavior === "copy" ? "#" : item.href}
             target={item.behavior === "copy" ? undefined : "_blank"}
             rel={item.behavior === "copy" ? undefined : "noopener noreferrer"}
-            className="w-8 h-8 text-white/60 hover:text-white transition-colors flex items-center justify-center"
+            className="w-8 h-8 text-[rgba(255,255,255,0.6)] hover:text-white transition-colors flex items-center justify-center"
             title={item.name}
             onClick={item.onClick}
           >

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
-import { motion, useScroll, useTransform } from "motion/react";
+import React, { useEffect, useRef, useState } from "react";
+import { motion, useScroll, useSpring, useTransform } from "motion/react";
 import { useHoverCapable } from "@/lib/hooks/use-hover-capable";
 
 export interface HeroSectionProps {
@@ -26,6 +26,15 @@ const HeroSection: React.FC<HeroSectionProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canHover = useHoverCapable();
+  const [useCssScroll, setUseCssScroll] = useState(false);
+
+  useEffect(() => {
+    const supported =
+      typeof CSS !== "undefined" &&
+      typeof CSS.supports === "function" &&
+      CSS.supports("animation-timeline", "view()");
+    setUseCssScroll(supported);
+  }, []);
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -35,6 +44,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
   const videoScaleDesktop = useTransform(scrollYProgress, [0, 0.5], [1, 1.7]);
   const videoScaleMobile = useTransform(scrollYProgress, [0, 0.5], [1, 1.8]);
   const videoScale = canHover ? videoScaleDesktop : videoScaleMobile;
+  const videoScaleSmooth = useSpring(videoScale, { stiffness: 160, damping: 42 });
   const videoBorderRadiusDesktop = useTransform(scrollYProgress, [0, 0.5], [20, 0]);
   // 移动端固定圆角，不做 borderRadius 动画（paint 开销大）
   const videoBorderRadius: number | ReturnType<typeof useTransform<number, number>> = canHover
@@ -73,22 +83,28 @@ const HeroSection: React.FC<HeroSectionProps> = ({
         style={{ contain: "layout paint" } as React.CSSProperties}
       >
         <div
-          className="sticky top-0 h-screen w-full overflow-hidden"
+          className="hs-track sticky top-0 h-screen w-full overflow-hidden"
           style={{ contain: "layout paint", transform: "translateZ(0)" } as React.CSSProperties}
         >
           <motion.div
-            className="absolute z-20 overflow-hidden"
-            style={{
-              top: "20%",
-              bottom: "20%",
-              left: "15%",
-              right: "15%",
-              scale: videoScale,
-              borderRadius: videoBorderRadius as unknown as number,
-              willChange: "transform",
-              contain: "layout paint",
-              transform: "translateZ(0)",
-            } as unknown as React.CSSProperties}
+            className="hs-video absolute z-20 overflow-hidden"
+            style={
+              {
+                top: "20%",
+                bottom: "20%",
+                left: "15%",
+                right: "15%",
+                ...(useCssScroll
+                  ? {}
+                  : {
+                      scale: videoScaleSmooth,
+                      borderRadius: videoBorderRadius as unknown as number,
+                    }),
+                willChange: "transform",
+                contain: "layout paint",
+                transform: "translateZ(0)",
+              } as unknown as React.CSSProperties
+            }
           >
             <video
               ref={videoRef}
@@ -104,11 +120,12 @@ const HeroSection: React.FC<HeroSectionProps> = ({
           </motion.div>
 
           <motion.div
-            className="absolute inset-0 z-30 pointer-events-none flex flex-col justify-between"
+            className="hs-text absolute inset-0 z-30 pointer-events-none flex flex-col justify-between"
             style={
               {
-                y: textY,
-                opacity: textOpacity,
+                ...(useCssScroll
+                  ? {}
+                  : { y: textY, opacity: textOpacity }),
                 willChange: "transform, opacity",
                 contain: "layout paint",
                 transform: "translateZ(0)",
