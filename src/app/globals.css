@@ -1,36 +1,30 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *, .dark, .dark *));
+
 :root {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-zh: var(--font-noto-sans-sc);
 
-  /* Day Mode (Default/Light) */
-  --bg-page: #FAFAFA;
-  --bg-card: #FFFFFF;
-  --text-primary: #171717;
-  --text-secondary: #666666;
-  --text-muted: #8E8E93;
+  /* Light Theme */
+  --bg-page: #FFFFFF;
+  --bg-card: #F9F9F9;
+  --text-primary: #121212;
+  --text-secondary: #525252;
+  --text-muted: #8A8A8A;
   --border-subtle: rgba(0, 0, 0, 0.08);
-  --border-strong: rgba(0, 0, 0, 0.15);
-  --accent: #f97316;
-  --accent-glow: rgba(249, 115, 22, 0.15);
-  --status-active: #10b981;
 }
 
 [data-theme="dark"],
 .dark {
-  /* Night Mode */
-  --bg-page: #0A0A0A;
-  --bg-card: #121212;
-  --text-primary: #F5F5F5;
-  --text-secondary: #A3A3A3;
-  --text-muted: #737373;
+  /* Dark Theme (Pure & Immersive) */
+  --bg-page: #000000;
+  --bg-card: #0D0D0D;
+  --text-primary: #F0F0F0;
+  --text-secondary: #9E9E9E;
+  --text-muted: #666666;
   --border-subtle: rgba(255, 255, 255, 0.1);
-  --border-strong: rgba(255, 255, 255, 0.2);
-  --accent: #f97316;
-  --accent-glow: rgba(249, 115, 22, 0.25);
-  --status-active: #34d399;
 }
 
 html {
@@ -48,39 +42,43 @@ body {
   color: var(--text-primary);
   font-family: var(--font-zh), var(--font-sans), system-ui, -apple-system, sans-serif;
   min-height: 100dvh;
-  transition: background-color 0.5s ease, color 0.5s ease;
+  transition: background-color 0.4s ease, color 0.4s ease;
   overflow-x: hidden;
 }
 
-/* Halftone / Dither visual overlays */
-.dither-grid-4 {
-  background-image: radial-gradient(circle, currentColor 1px, transparent 1px);
-  background-size: 4px 4px;
+/* 8-bit & Halftone Dither Matrix Overlays */
+.dither-matrix-dense {
+  background-image: 
+    radial-gradient(circle, currentColor 1.15px, transparent 1.15px),
+    radial-gradient(circle, currentColor 0.75px, transparent 0.75px);
+  background-size: 4px 4px, 2px 2px;
+  background-position: 0 0, 1px 1px;
 }
 
-.dither-grid-3 {
-  background-image: radial-gradient(circle, currentColor 0.9px, transparent 0.9px);
+.dither-matrix-medium {
+  background-image: radial-gradient(circle, currentColor 1px, transparent 1px);
   background-size: 3px 3px;
 }
 
-.dither-grid-2 {
-  background-image: radial-gradient(circle, currentColor 0.8px, transparent 0.8px);
-  background-size: 2px 2px;
+/* Dither edge mask: strictly center transparent, rim/edges fully visible */
+.dither-edge-mask {
+  mask-image: radial-gradient(ellipse 92% 86% at 50% 50%, transparent 54%, black 90%);
+  -webkit-mask-image: radial-gradient(ellipse 92% 86% at 50% 50%, transparent 54%, black 90%);
 }
 
-/* Outer frame blurred glow */
-.window-glow-day {
-  background: radial-gradient(circle at 50% 50%, rgba(251, 191, 36, 0.18), rgba(249, 115, 22, 0.12), transparent 70%);
+/* Video boundary feathering into canvas background */
+.video-feather-dissolve {
+  mask-image: radial-gradient(ellipse 96% 92% at 50% 50%, black 64%, transparent 98%);
+  -webkit-mask-image: radial-gradient(ellipse 96% 92% at 50% 50%, black 64%, transparent 98%);
 }
 
-.window-glow-night {
-  background: radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.22), rgba(168, 85, 247, 0.14), transparent 70%);
+/* Light & Dark Ambient Glows around video */
+.hero-glow-light {
+  background: radial-gradient(ellipse 90% 80% at 50% 50%, rgba(186, 230, 253, 0.55), rgba(199, 210, 254, 0.4), rgba(254, 240, 138, 0.15), transparent 75%);
 }
 
-/* Vignette and edge mask */
-.video-vignette-mask {
-  mask-image: radial-gradient(ellipse 98% 98% at 50% 50%, black 75%, transparent 100%);
-  -webkit-mask-image: radial-gradient(ellipse 98% 98% at 50% 50%, black 75%, transparent 100%);
+.hero-glow-dark {
+  background: radial-gradient(ellipse 90% 80% at 50% 50%, rgba(30, 58, 138, 0.22), rgba(88, 28, 135, 0.14), transparent 75%);
 }
 
 /* Monospace numeric styling */
@@ -89,7 +87,6 @@ body {
   letter-spacing: -0.02em;
 }
 
-/* Subtle selection color */
 ::selection {
   background: rgba(249, 115, 22, 0.25);
   color: inherit;

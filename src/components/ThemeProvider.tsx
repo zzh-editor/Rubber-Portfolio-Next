@@ -17,47 +17,43 @@ const ThemeContext = createContext<ThemeContextType>({
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setThemeState] = useState<Theme>("dark");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     const saved = localStorage.getItem("rubber-theme") as Theme | null;
+    let initial: Theme = "dark";
     if (saved === "light" || saved === "dark") {
-      setTheme(saved);
-      document.documentElement.setAttribute("data-theme", saved);
-      if (saved === "dark") {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
+      initial = saved;
     } else {
-      // Default to dark or match system
       const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const initial = prefersDark ? "dark" : "light";
-      setTheme(initial);
-      document.documentElement.setAttribute("data-theme", initial);
-      if (initial === "dark") {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
+      initial = prefersDark ? "dark" : "light";
     }
+
+    setThemeState(initial);
+    applyThemeToDOM(initial);
   }, []);
 
-  const updateTheme = (newTheme: Theme) => {
-    setTheme(newTheme);
-    localStorage.setItem("rubber-theme", newTheme);
-    document.documentElement.setAttribute("data-theme", newTheme);
-    if (newTheme === "dark") {
-      document.documentElement.classList.add("dark");
+  const applyThemeToDOM = (t: Theme) => {
+    const root = document.documentElement;
+    root.setAttribute("data-theme", t);
+    if (t === "dark") {
+      root.classList.add("dark");
     } else {
-      document.documentElement.classList.remove("dark");
+      root.classList.remove("dark");
     }
   };
 
+  const updateTheme = (newTheme: Theme) => {
+    setThemeState(newTheme);
+    localStorage.setItem("rubber-theme", newTheme);
+    applyThemeToDOM(newTheme);
+  };
+
   const toggleTheme = () => {
-    updateTheme(theme === "dark" ? "light" : "dark");
+    const next = theme === "dark" ? "light" : "dark";
+    updateTheme(next);
   };
 
   return (

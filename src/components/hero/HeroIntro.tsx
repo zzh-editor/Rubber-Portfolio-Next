@@ -1,44 +1,18 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import Image from "next/image";
+import React, { useState } from "react";
 import Link from "next/link";
-import {
-  personalProfile,
-  socialLinks,
-} from "@/data/portfolio-data";
+import { personalProfile, socialLinks } from "@/data/portfolio-data";
 import {
   ArrowUpRight,
   Download,
   Check,
   Copy,
-  MapPin,
-  Clock,
 } from "lucide-react";
 import { FadeBlurIn } from "@/components/ui/beui/motion-primitives";
 
 export function HeroIntro() {
-  const [currentTime, setCurrentTime] = useState<string>("");
   const [copiedWeChat, setCopiedWeChat] = useState<boolean>(false);
-
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      // Format: 19:48:02 CST
-      const timeStr = now.toLocaleTimeString("en-GB", {
-        timeZone: "Asia/Shanghai",
-        hour12: false,
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      });
-      setCurrentTime(timeStr);
-    };
-
-    updateTime();
-    const timer = setInterval(updateTime, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   const handleCopyWeChat = async (copyValue?: string) => {
     if (!copyValue) return;
@@ -47,124 +21,103 @@ export function HeroIntro() {
       setCopiedWeChat(true);
       setTimeout(() => setCopiedWeChat(false), 2400);
     } catch {
-      // Fallback
       setCopiedWeChat(true);
       setTimeout(() => setCopiedWeChat(false), 2400);
     }
   };
 
-  const wechatItem = socialLinks.find((s) => s.id === "wechat");
-  const externalSocials = socialLinks.filter((s) => s.id !== "wechat");
+  const xhs = socialLinks.find((s) => s.id === "xiaohongshu");
+  const bili = socialLinks.find((s) => s.id === "bilibili");
+  const ins = socialLinks.find((s) => s.id === "instagram");
+  const wechat = socialLinks.find((s) => s.id === "wechat");
 
   return (
-    <FadeBlurIn duration={0.5} yOffset={10} className="w-full space-y-7">
-      {/* Top Header: Avatar + Identity + Live Location/Status */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        {/* Left: Avatar & Name */}
-        <div className="flex items-center gap-3.5">
-          <div className="relative w-12 h-12 rounded-2xl overflow-hidden border border-neutral-200/90 dark:border-neutral-800 shadow-sm bg-neutral-100 dark:bg-neutral-900 shrink-0">
-            <Image
-              src={personalProfile.assets.logo}
-              alt={personalProfile.name}
-              fill
-              sizes="48px"
-              className="object-cover"
-              priority
-            />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
-                {personalProfile.name}
-              </h1>
-              <span className="text-xs font-mono px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800/80 text-neutral-600 dark:text-neutral-300 border border-neutral-200/60 dark:border-neutral-700/60">
-                {personalProfile.englishName}
-              </span>
-            </div>
-            <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 font-medium">
-              {personalProfile.role} · {personalProfile.currentFocus}
-            </p>
-          </div>
-        </div>
+    <FadeBlurIn
+      duration={0.6}
+      yOffset={8}
+      className="w-full space-y-5 text-left select-text"
+    >
+      {/* Bio Paragraph 1: Identity & Origin */}
+      <p className="text-[17px] sm:text-[19px] leading-relaxed text-neutral-800 dark:text-neutral-200">
+        我是<span className="font-semibold text-neutral-900 dark:text-white mx-1">{personalProfile.name}</span>
+        （{personalProfile.englishName}），一名生于 {personalProfile.birthYear} 年、来自广东{personalProfile.hometown}的
+        <span className="font-medium text-neutral-900 dark:text-white mx-1">{personalProfile.role}</span>与创作者。
+      </p>
 
-        {/* Right: Live Location & Pulsing Time Badge (kshv.me style) */}
-        <div className="inline-flex items-center gap-2 self-start sm:self-auto px-3 py-1.5 rounded-full text-xs font-mono bg-neutral-100/90 dark:bg-neutral-900/90 border border-neutral-200/70 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-          </span>
-          <span className="flex items-center gap-1">
-            <MapPin className="w-3 h-3 text-neutral-400" />
-            {personalProfile.hometown} / CHINA
-          </span>
-          <span className="text-neutral-300 dark:text-neutral-700">·</span>
-          <span className="flex items-center gap-1 font-mono-numbers">
-            <Clock className="w-3 h-3 text-neutral-400" />
-            {currentTime ? `${currentTime} GMT+8` : "GMT+8"}
-          </span>
-        </div>
-      </div>
+      {/* Bio Paragraph 2: Journey & Competence */}
+      <p className="text-[15px] sm:text-[16px] leading-relaxed text-neutral-600 dark:text-neutral-400">
+        从摄影工作室学徒到视频团队负责人，用 8 年时间完成从执行到管理的跨越。一个脱离了信息茧房的人，具备极高的信息检索与学习能力，审美在线；擅长将创意转化为可执行的标准流程，让团队产出既有质量又有效率。
+      </p>
 
-      {/* Bio Paragraphs */}
-      <div className="space-y-3 text-[15px] sm:text-[16px] leading-relaxed text-neutral-600 dark:text-neutral-400">
-        {personalProfile.bioParagraphs.map((paragraph, idx) => (
-          <p key={idx} className="transition-colors">
-            {paragraph}
-          </p>
-        ))}
-      </div>
-
-      {/* Social Links & Resume Capsule Buttons */}
-      <div className="pt-2 flex flex-wrap items-center gap-2.5">
-        {externalSocials.map((item) => (
+      {/* Bio Paragraph 3: Current Focus & Actionable Links (kshv.me style) */}
+      <p className="text-[15px] sm:text-[16px] leading-relaxed text-neutral-600 dark:text-neutral-400">
+        {personalProfile.currentFocus}。欢迎在{" "}
+        {xhs && (
           <Link
-            key={item.id}
-            href={item.url || "#"}
+            href={xhs.url || "#"}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-100/80 hover:bg-neutral-200/80 dark:bg-neutral-900/80 dark:hover:bg-neutral-800/80 border border-neutral-200/80 dark:border-neutral-800 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="inline-flex items-center text-neutral-900 dark:text-neutral-200 font-medium hover:underline underline-offset-4 decoration-neutral-400 dark:decoration-neutral-500"
           >
-            {item.name}
-            <ArrowUpRight className="w-3 h-3 opacity-60" />
+            {xhs.name}
+            <ArrowUpRight className="w-3 h-3 ml-0.5 opacity-60 inline" />
           </Link>
-        ))}
-
-        {/* WeChat Quick Copy Button */}
-        {wechatItem && (
+        )}
+        、
+        {bili && (
+          <Link
+            href={bili.url || "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center text-neutral-900 dark:text-neutral-200 font-medium hover:underline underline-offset-4 decoration-neutral-400 dark:decoration-neutral-500"
+          >
+            {bili.name}
+            <ArrowUpRight className="w-3 h-3 ml-0.5 opacity-60 inline" />
+          </Link>
+        )}
+        、
+        {ins && (
+          <Link
+            href={ins.url || "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center text-neutral-900 dark:text-neutral-200 font-medium hover:underline underline-offset-4 decoration-neutral-400 dark:decoration-neutral-500"
+          >
+            {ins.name}
+            <ArrowUpRight className="w-3 h-3 ml-0.5 opacity-60 inline" />
+          </Link>
+        )}
+        {" "}关注我的动态；微信号可点击{" "}
+        {wechat && (
           <button
             type="button"
-            onClick={() => handleCopyWeChat(wechatItem.copyValue)}
-            className="relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-100/80 hover:bg-neutral-200/80 dark:bg-neutral-900/80 dark:hover:bg-neutral-800/80 border border-neutral-200/80 dark:border-neutral-800 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+            onClick={() => handleCopyWeChat(wechat.copyValue)}
+            className="inline-flex items-center text-neutral-900 dark:text-neutral-200 font-medium hover:underline underline-offset-4 decoration-neutral-400 dark:decoration-neutral-500 cursor-pointer"
             title="点击复制微信号"
           >
             {copiedWeChat ? (
-              <>
-                <Check className="w-3 h-3 text-emerald-500" />
-                <span className="text-emerald-600 dark:text-emerald-400">微信号已复制</span>
-              </>
+              <span className="text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-0.5">
+                <Check className="w-3.5 h-3.5 inline" /> 已复制微信
+              </span>
             ) : (
-              <>
-                <Copy className="w-3 h-3 opacity-60" />
-                <span>微信</span>
-              </>
+              <span className="inline-flex items-center gap-0.5">
+                <Copy className="w-3 h-3 opacity-60 inline" /> 复制微信
+              </span>
             )}
           </button>
         )}
-
-        {/* Resume Download Pill */}
+        ，或直接{" "}
         <a
           href={personalProfile.assets.resumePdf.path}
           download
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium text-white bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200 border border-transparent transition-all shadow-sm hover:scale-[1.02] active:scale-[0.98]"
+          className="inline-flex items-center text-neutral-900 dark:text-neutral-200 font-medium hover:underline underline-offset-4 decoration-neutral-400 dark:decoration-neutral-500"
           aria-label={personalProfile.assets.resumePdf.ariaLabel}
         >
-          <Download className="w-3.5 h-3.5" />
-          <span>{personalProfile.assets.resumePdf.buttonText}</span>
-          <span className="text-[10px] opacity-75 font-mono ml-0.5">
-            ({personalProfile.assets.resumePdf.metaLabel.split("·")[2]?.trim() || "PDF"})
-          </span>
+          <Download className="w-3 h-3 ml-0.5 opacity-60 inline mr-0.5" />
+          下载完整简历
         </a>
-      </div>
+        。
+      </p>
     </FadeBlurIn>
   );
 }
