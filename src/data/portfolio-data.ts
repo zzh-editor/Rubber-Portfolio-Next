@@ -67,7 +67,7 @@ export const workExperiences: WorkExperienceItem[] = [
   {
     id: "max-cg",
     company: "麦克思游戏CG",
-    role: "视频组组长",
+    role: "视频团队负责人",
     period: "2025.08 - 至今",
     tags: ["体系搭建", "团队管理", "流程设计"],
     companyIntro:

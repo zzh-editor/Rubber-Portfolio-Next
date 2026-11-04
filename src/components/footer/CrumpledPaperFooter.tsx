@@ -45,9 +45,9 @@ const socialList: SocialItem[] = [
 ];
 
 /**
- * Drawably 风格手绘箭头（统一高亮蓝色 #3b82f6，固定指向右下角纸团原点）
+ * Drawably 风格手绘箭头（统一高亮蓝色 #3b82f6，固定指向右下角原点）
  */
-function DrawablyHandArrow({ className }: { className?: string }) {
+export function DrawablyHandArrow({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 100 100"
@@ -121,12 +121,12 @@ export function CrumpledPaperFooter() {
     };
   }, []);
 
-  // 纸团滚入就位后（约 650ms），手绘箭头平滑渐显；点击展开或向上滚动离开时箭头瞬隐
+  // 纸团滚入停稳后（约 1250ms），手绘箭头平滑渐显；点击展开或向上滚动离开时箭头瞬隐
   useEffect(() => {
     if (isVisible && !isOpen) {
       const timer = setTimeout(() => {
         setArrowTimerReady(true);
-      }, 650);
+      }, 1250);
       return () => {
         clearTimeout(timer);
         setArrowTimerReady(false);
@@ -165,19 +165,27 @@ export function CrumpledPaperFooter() {
         )}
       </AnimatePresence>
 
-      {/* 2. 纸团与手绘箭头容器（固定在视口右下角坐标原点，具备清晰可见的旋转滚动入场与出场） */}
+      {/* 2. 纸团与手绘箭头容器（拟真物理大阻尼滚动入场与顺势滚出） */}
       <motion.div
-        initial={{ x: 300, rotate: 480, opacity: 0 }}
+        initial={{ x: 340, rotate: 520, opacity: 0 }}
         animate={
           isVisible
             ? { x: 0, rotate: 0, opacity: 1 }
-            : { x: 300, rotate: 480, opacity: 0 }
+            : { x: 340, rotate: 520, opacity: 0 }
         }
-        transition={{
-          x: { duration: 0.65, ease: [0.16, 1, 0.3, 1] },
-          rotate: { duration: 0.65, ease: [0.16, 1, 0.3, 1] },
-          opacity: { duration: 0.3 },
-        }}
+        transition={
+          isVisible
+            ? {
+                x: { duration: 1.25, ease: [0.08, 0.82, 0.17, 1] },
+                rotate: { duration: 1.25, ease: [0.08, 0.82, 0.17, 1] },
+                opacity: { duration: 0.4 },
+              }
+            : {
+                x: { duration: 0.85, ease: [0.38, 0, 0.72, 0] },
+                rotate: { duration: 0.85, ease: [0.38, 0, 0.72, 0] },
+                opacity: { duration: 0.35 },
+              }
+        }
         className="fixed bottom-6 right-5 sm:right-8 z-40 select-none"
       >
         {/* Drawably 手绘指示箭头：稳稳指向放大后的纸团，点击展开瞬间或离开时渐隐 */}
