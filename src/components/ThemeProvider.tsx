@@ -1,68 +1,31 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import * as React from "react";
+import { ThemeProvider as NextThemesProvider } from "next-themes";
 
-type Theme = "light" | "dark";
-
-interface ThemeContextType {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
-  toggleTheme: () => void;
+// 拦截 next-themes 在 React 19 / Next.js 16 下注入内联防闪烁 script 触发的开发期误报
+if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+  const originalError = console.error;
+  console.error = (...args: unknown[]) => {
+    if (
+      typeof args[0] === "string" &&
+      args[0].includes("Encountered a script tag while rendering React component")
+    ) {
+      return;
+    }
+    originalError.apply(console, args);
+  };
 }
-
-const ThemeContext = createContext<ThemeContextType>({
-  theme: "dark",
-  setTheme: () => {},
-  toggleTheme: () => {},
-});
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("dark");
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    const saved = localStorage.getItem("rubber-theme") as Theme | null;
-    let initial: Theme = "dark";
-    if (saved === "light" || saved === "dark") {
-      initial = saved;
-    } else {
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      initial = prefersDark ? "dark" : "light";
-    }
-
-    setThemeState(initial);
-    applyThemeToDOM(initial);
-  }, []);
-
-  const applyThemeToDOM = (t: Theme) => {
-    const root = document.documentElement;
-    root.setAttribute("data-theme", t);
-    if (t === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-  };
-
-  const updateTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
-    localStorage.setItem("rubber-theme", newTheme);
-    applyThemeToDOM(newTheme);
-  };
-
-  const toggleTheme = () => {
-    const next = theme === "dark" ? "light" : "dark";
-    updateTheme(next);
-  };
-
   return (
-    <ThemeContext.Provider value={{ theme, setTheme: updateTheme, toggleTheme }}>
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme="light"
+      enableSystem={false}
+      disableTransitionOnChange
+    >
       {children}
-    </ThemeContext.Provider>
+    </NextThemesProvider>
   );
-}
-
-export function useTheme() {
-  return useContext(ThemeContext);
 }

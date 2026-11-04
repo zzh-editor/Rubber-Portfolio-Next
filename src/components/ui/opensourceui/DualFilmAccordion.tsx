@@ -1,0 +1,803 @@
+"use client";
+
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+  useTransition,
+  useSyncExternalStore,
+} from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { motion, AnimatePresence, type Transition } from "motion/react";
+import { Play, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { type ProjectItem } from "@/data/portfolio-data";
+import {
+  photoProjects,
+  getRandomSixPhotos,
+  DEFAULT_SIX_PHOTOS,
+  type FilmPhotoCard,
+  type PhotoProject,
+} from "@/data/photography-data";
+
+// 客户端安全快照（彻底解决 SSR/Hydration mismatch，同时保证每次刷新页面随机 6 张）
+let clientRandomPhotosCache: FilmPhotoCard[] | null = null;
+const emptySubscribe = () => () => {};
+
+function useRandomSixPhotos(): FilmPhotoCard[] {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => {
+      if (!clientRandomPhotosCache) {
+        clientRandomPhotosCache = getRandomSixPhotos();
+      }
+      return clientRandomPhotosCache;
+    },
+    () => DEFAULT_SIX_PHOTOS
+  );
+}
+
+interface DualFilmAccordionProps {
+  videoItems: ProjectItem[];
+  className?: string;
+}
+
+// 一级胶囊横向手风琴弹性过渡（与工作板块 EXPAND_TRANSITION: bounce 0.32 同款参数）
+const PILL_SPRING: Transition = {
+  type: "spring",
+  duration: 0.58,
+  bounce: 0.32,
+};
+
+export function DualFilmAccordion({
+  videoItems,
+  className,
+}: DualFilmAccordionProps) {
+  // 当前展开的胶卷："video" 或 "photo"
+  const [activeStrip, setActiveStrip] = useState<"video" | "photo">("video");
+
+  // 胶卷随机 6 张代表作（通过 useSyncExternalStore 杜绝水合不一致）
+  const randomPhotos = useRandomSixPhotos();
+
+  // 多级画廊状态
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+
+  // React Transition：胶囊高亮即刻更新（60fps 弹簧滑块），大列表更新分批执行，彻底解决卡顿
+  const [, startTransition] = useTransition();
+
+  // 一级分类："all" | "tws" | "personal"（即时状态）
+  const [mainCategory, setMainCategory] = useState<"all" | "tws" | "personal">("all");
+  // 二级分类（即时状态）
+  const [twsSubCategory, setTwsSubCategory] = useState<string>("all");
+
+  // 延迟状态（供计算 200+ 张照片大网格，不阻塞主线程动画）
+  const [deferredMainCategory, setDeferredMainCategory] = useState<"all" | "tws" | "personal">("all");
+  const [deferredTwsSubCategory, setDeferredTwsSubCategory] = useState<string>("all");
+
+  // 分批渲染上限（初始只渲染首屏 36 张，保证胶囊切换瞬间 0 掉帧；随后空闲补齐全部照片）
+  const [renderLimit, setRenderLimit] = useState(36);
+
+  // 一级胶囊切换处理（0 掉帧）
+  const handleSelectMainCategory = (catId: "all" | "tws" | "personal") => {
+    setMainCategory(catId);
+    setTwsSubCategory("all");
+    setRenderLimit(36);
+    startTransition(() => {
+      setDeferredMainCategory(catId);
+      setDeferredTwsSubCategory("all");
+    });
+  };
+
+  // 二级胶囊切换处理（0 掉帧）
+  const handleSelectTwsSubCategory = (subId: string) => {
+    setTwsSubCategory(subId);
+    setRenderLimit(36);
+    startTransition(() => {
+      setDeferredTwsSubCategory(subId);
+    });
+  };
+
+  // 分批补全剩余照片（等待胶囊弹簧动画完成后的空闲期补全）
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setRenderLimit(9999);
+    }, 180);
+    return () => clearTimeout(timer);
+  }, [deferredMainCategory, deferredTwsSubCategory]);
+
+  // 切换胶卷展开项（依靠绝对锚定 + 容器 overflow-hidden 实现水平平滑物理裁切，绝无任何拉伸形变）
+  const handleSwitchStrip = (target: "video" | "photo") => {
+    if (activeStrip === target) return;
+    setActiveStrip(target);
+  };
+
+  // 当前大图放大查看的照片信息（null 为相册网格模式，有值时为大图模式）
+  const [activePhotoState, setActivePhotoState] = useState<{
+    project: PhotoProject;
+    photoIndex: number;
+  } | null>(null);
+
+  // 缩略图滚动容器引用与每个缩略图的 DOM 引用（用于精准平滑居中定位）
+  const stripContainerRef = useRef<HTMLDivElement>(null);
+  const thumbRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  // 当项目变更时重置缩略图引用列表
+  useEffect(() => {
+    thumbRefs.current = [];
+  }, [activePhotoState?.project.id]);
+
+  // 监听外部事件（例如工作板块 TodayWellSpent 的「👀 看看照片」按钮）
+  useEffect(() => {
+    const handleOpenGalleryEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ category?: "all" | "tws" | "personal" }>;
+      setIsGalleryOpen(true);
+      const cat = customEvent.detail?.category || "tws";
+      handleSelectMainCategory(cat);
+      setActivePhotoState(null);
+    };
+
+    window.addEventListener("open-gallery", handleOpenGalleryEvent);
+    return () => {
+      window.removeEventListener("open-gallery", handleOpenGalleryEvent);
+    };
+  }, []);
+
+  // 跑马灯无限循环列表
+  const loopedVideos = [...videoItems, ...videoItems, ...videoItems];
+  const loopedPhotos =
+    randomPhotos.length > 0
+      ? [...randomPhotos, ...randomPhotos, ...randomPhotos, ...randomPhotos]
+      : [];
+
+  // 计算当前分类下需要平铺展示的照片列表（基于 deferred 状态，杜绝卡顿）
+  const displayPhotos = useMemo(() => {
+    const list: { project: PhotoProject; src: string; indexInProject: number }[] = [];
+
+    // 根据一级分类过滤项目列表
+    let filteredProjects: PhotoProject[] = [];
+    if (deferredMainCategory === "all") {
+      filteredProjects = photoProjects;
+    } else if (deferredMainCategory === "personal") {
+      filteredProjects = photoProjects.filter((p) => p.group === "personal");
+    } else if (deferredMainCategory === "tws") {
+      if (deferredTwsSubCategory === "all") {
+        filteredProjects = photoProjects.filter((p) => p.group === "tws");
+      } else {
+        filteredProjects = photoProjects.filter((p) => p.id === deferredTwsSubCategory);
+      }
+    }
+
+    for (const proj of filteredProjects) {
+      proj.photos.forEach((src, idx) => {
+        list.push({ project: proj, src, indexInProject: idx });
+      });
+    }
+    return list;
+  }, [deferredMainCategory, deferredTwsSubCategory]);
+
+  // 视口分批渲染列表（前 36 张瞬间直出，180ms 后全量补齐，彻底解决分类切换卡顿）
+  const visiblePhotos = useMemo(() => {
+    return displayPhotos.slice(0, renderLimit);
+  }, [displayPhotos, renderLimit]);
+
+  // 从主页照片胶卷点击任意图片：进入涵盖不同拍摄项目的总照片墙网格（Level 2）
+  const handleOpenGeneralGallery = () => {
+    setIsGalleryOpen(true);
+    handleSelectMainCategory("all");
+    setActivePhotoState(null);
+  };
+
+  // 在照片墙中点击某张照片：进入该照片所在项目的单张大图灯箱（Level 3）
+  const handleSelectPhotoToLightbox = (item: {
+    project: PhotoProject;
+    src: string;
+    indexInProject: number;
+  }) => {
+    setActivePhotoState({
+      project: item.project,
+      photoIndex: item.indexInProject,
+    });
+  };
+
+  // 电影级胶带定位算法：
+  // 借助 getBoundingClientRect 精准居中当前选中图片，绝不受 offsetParent 干扰，永不飞出胶带范围
+  useEffect(() => {
+    if (!activePhotoState) return;
+
+    const animId = requestAnimationFrame(() => {
+      const container = stripContainerRef.current;
+      const targetBtn = thumbRefs.current[activePhotoState.photoIndex];
+      if (!container || !targetBtn) return;
+
+      const containerRect = container.getBoundingClientRect();
+      const btnRect = targetBtn.getBoundingClientRect();
+
+      // 缩略图中心点相对于容器可视区域左边的水平位移
+      const btnCenterRel = btnRect.left - containerRect.left + btnRect.width / 2;
+      // 欲使中心点到达容器可视中心所需滚动的相对距离
+      const scrollDelta = btnCenterRel - containerRect.width / 2;
+
+      const targetScrollLeft = container.scrollLeft + scrollDelta;
+      const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
+
+      // 夹紧在有效可滚动区间内：
+      // 前后不足时停靠边距，发光框向边缘移动
+      const clampedScroll = Math.max(0, Math.min(maxScrollLeft, targetScrollLeft));
+
+      container.scrollTo({
+        left: clampedScroll,
+        behavior: "smooth",
+      });
+    });
+
+    return () => cancelAnimationFrame(animId);
+  }, [activePhotoState]);
+
+  // 键盘事件与一层一层后退机制（ESC 层级后退）
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (!isGalleryOpen) return;
+
+      if (e.key === "Escape") {
+        if (activePhotoState !== null) {
+          // Level 3 -> Level 2：从大图退出到当前项目网格相册
+          setActivePhotoState(null);
+        } else {
+          // Level 2 -> Level 1：从相册网格退出回到主页
+          setIsGalleryOpen(false);
+        }
+      } else if (activePhotoState !== null) {
+        // 大图模式下键盘左右箭头切图
+        if (e.key === "ArrowLeft") {
+          setActivePhotoState((prev) => {
+            if (!prev) return null;
+            const total = prev.project.photos.length;
+            const nextIdx = prev.photoIndex === 0 ? total - 1 : prev.photoIndex - 1;
+            return { ...prev, photoIndex: nextIdx };
+          });
+        } else if (e.key === "ArrowRight") {
+          setActivePhotoState((prev) => {
+            if (!prev) return null;
+            const total = prev.project.photos.length;
+            const nextIdx = prev.photoIndex === total - 1 ? 0 : prev.photoIndex + 1;
+            return { ...prev, photoIndex: nextIdx };
+          });
+        }
+      }
+    },
+    [isGalleryOpen, activePhotoState]
+  );
+
+  useEffect(() => {
+    if (isGalleryOpen) {
+      window.addEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [isGalleryOpen, handleKeyDown]);
+
+  return (
+    <>
+      {/* 
+        双胶卷手风琴主体容器：
+        左右两个胶卷常驻于 DOM 中，通过 layout 宽度插值实现真实推拉回弹，
+        内部元素通过绝对尺寸固定，杜绝收缩时的横向非等比形变拉扁！
+      */}
+      <div
+        className={cn(
+          "w-full h-[216px] sm:h-[246px] flex items-stretch gap-2.5 sm:gap-3.5 select-none font-mono py-1 px-0.5",
+          className
+        )}
+      >
+        {/* ==================== 1. 左侧：视频胶卷 ==================== */}
+        <div
+          onClick={activeStrip !== "video" ? () => handleSwitchStrip("video") : undefined}
+          className={cn(
+            "h-full rounded-2xl select-none relative overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]",
+            activeStrip === "video"
+              ? "flex-1 min-w-[240px] bg-neutral-900 border border-neutral-800 shadow-md group cursor-default"
+              : "w-14 sm:w-16 shrink-0 bg-gradient-to-b from-neutral-800 via-neutral-900 to-neutral-950 border border-neutral-700/80 cursor-pointer hover:border-neutral-500"
+          )}
+        >
+          {/* 展开状态的 35mm 视频胶片带：完全展开后再渐显 (delay-[320ms])，避免半路展开卡片重叠闪烁 */}
+          <div
+            className={cn(
+              "h-full w-[1400px] absolute left-0 top-0 flex flex-col justify-between py-3 pointer-events-auto",
+              activeStrip === "video"
+                ? "opacity-100 transition-opacity duration-250 delay-[320ms]"
+                : "opacity-0 pointer-events-none transition-opacity duration-150 delay-0"
+            )}
+          >
+            {/* 顶部齿孔条 */}
+            <div className="flex items-center px-4 pb-2 overflow-hidden gap-3 border-b border-neutral-800/80 shrink-0">
+              {Array.from({ length: 48 }).map((_, i) => (
+                <div
+                  key={`video-top-sprocket-${i}`}
+                  className="h-2 w-1.5 shrink-0 rounded-xs bg-neutral-700/80 border border-neutral-600/30"
+                />
+              ))}
+            </div>
+
+            {/* 视频卡片无限循环滚动轨道 */}
+            <div className="relative w-full py-1 overflow-hidden my-auto">
+              <div className="flex gap-3.5 w-max animate-film-strip-marquee group-hover:[animation-play-state:paused]">
+                {loopedVideos.map((item, idx) => (
+                  <Link
+                    key={`video-${item.id}-${idx}`}
+                    href={item.videoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="relative block h-28 w-40 sm:h-32 sm:w-48 shrink-0 overflow-hidden rounded-xs border-2 border-neutral-800 bg-neutral-950 group/frame transition-all duration-300 hover:border-neutral-500 hover:scale-[1.02]"
+                  >
+                    <Image
+                      src={item.imageSrc}
+                      alt={item.title}
+                      fill
+                      sizes="(max-width: 640px) 160px, 192px"
+                      className="object-cover transition-transform duration-500 group-hover/frame:scale-105"
+                    />
+
+                    {/* 暗色浮层 */}
+                    <div className="absolute inset-0 bg-black/45 opacity-0 group-hover/frame:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-2">
+                      <div className="self-end">
+                        <span className="inline-block text-[9px] uppercase px-1.5 py-0.5 rounded-xs bg-white/20 backdrop-blur-xs text-white font-medium">
+                          {item.platform}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-white">
+                        <div className="flex size-5.5 items-center justify-center rounded-full bg-white/90 text-neutral-900 shadow-sm shrink-0">
+                          <Play className="size-2.5 fill-current ml-0.5" />
+                        </div>
+                        <span className="text-xs font-sans font-medium line-clamp-1 drop-shadow-sm">
+                          {item.title}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* 底部齿孔条 */}
+            <div className="flex items-center px-4 pt-2 overflow-hidden gap-3 border-t border-neutral-800/80 shrink-0">
+              {Array.from({ length: 48 }).map((_, i) => (
+                <div
+                  key={`video-bottom-sprocket-${i}`}
+                  className="h-2 w-1.5 shrink-0 rounded-xs bg-neutral-700/80 border border-neutral-600/30"
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* 收起状态的刚性立体暗盒：严格锁死尺寸在最左侧，绝无任何拉伸形变 */}
+          <div
+            className={cn(
+              "w-14 sm:w-16 h-full absolute left-0 top-0 flex flex-col items-center justify-between py-4 select-none pointer-events-none z-20",
+              activeStrip === "video"
+                ? "opacity-0 pointer-events-none transition-opacity duration-150 delay-0"
+                : "opacity-100 transition-opacity duration-250 delay-[250ms]"
+            )}
+          >
+            {/* 胶卷引带舌片（右侧微凸） */}
+            <div className="absolute top-1/2 -translate-y-1/2 -right-1 w-1.5 h-9 bg-neutral-950/80 rounded-r-xs pointer-events-none" />
+
+            {/* 顶部金属转钮 */}
+            <div className="w-8 h-2 rounded-full bg-neutral-700 border border-neutral-600 shadow-inner shrink-0 flex items-center justify-center">
+              <div className="w-2 h-1 rounded-full bg-neutral-900" />
+            </div>
+
+            {/* 纯净竖排大字：视频 */}
+            <span className="my-auto text-sm sm:text-[15px] font-sans font-bold tracking-[0.3em] text-neutral-300 group-hover:text-white transition-colors [writing-mode:vertical-rl] select-none">
+              视频
+            </span>
+
+            {/* 底部金属转钮 */}
+            <div className="w-8 h-2 rounded-full bg-neutral-700 border border-neutral-600 shadow-inner shrink-0 flex items-center justify-center">
+              <div className="w-2 h-1 rounded-full bg-neutral-900" />
+            </div>
+          </div>
+        </div>
+
+        {/* ==================== 2. 右侧：照片胶卷 ==================== */}
+        <div
+          onClick={activeStrip !== "photo" ? () => handleSwitchStrip("photo") : undefined}
+          className={cn(
+            "h-full rounded-2xl select-none relative overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]",
+            activeStrip === "photo"
+              ? "flex-1 min-w-[240px] bg-neutral-900 border border-neutral-800 shadow-md group cursor-default"
+              : "w-14 sm:w-16 shrink-0 bg-gradient-to-b from-neutral-800 via-neutral-900 to-neutral-950 border border-neutral-700/80 cursor-pointer hover:border-neutral-500"
+          )}
+        >
+          {/* 展开状态的 35mm 照片胶片带：固定右对齐 (right-0)，完全展开后再渐显 (delay-[320ms]) */}
+          <div
+            className={cn(
+              "h-full w-[1400px] absolute right-0 top-0 flex flex-col justify-between py-3 pointer-events-auto",
+              activeStrip === "photo"
+                ? "opacity-100 transition-opacity duration-250 delay-[320ms]"
+                : "opacity-0 pointer-events-none transition-opacity duration-150 delay-0"
+            )}
+          >
+            {/* 顶部齿孔条 */}
+            <div className="flex justify-end items-center px-4 pb-2 overflow-hidden gap-3 border-b border-neutral-800/80 shrink-0">
+              {Array.from({ length: 48 }).map((_, i) => (
+                <div
+                  key={`photo-top-sprocket-${i}`}
+                  className="h-2 w-1.5 shrink-0 rounded-xs bg-neutral-700/80 border border-neutral-600/30"
+                />
+              ))}
+            </div>
+
+            {/* 随机6张代表作无限循环滚动轨道 */}
+            <div className="relative w-full py-1 overflow-hidden my-auto">
+              <div className="flex gap-3.5 w-max animate-film-strip-marquee group-hover:[animation-play-state:paused] justify-end">
+                {loopedPhotos.map((card, idx) => (
+                  <button
+                    key={`photo-${card.projectId}-${idx}`}
+                    type="button"
+                    onClick={handleOpenGeneralGallery}
+                    className="relative block h-28 w-38 sm:h-32 sm:w-44 shrink-0 overflow-hidden rounded-xs border-2 border-neutral-800 bg-neutral-950 group/frame transition-all duration-300 hover:border-neutral-400 hover:scale-[1.02] cursor-pointer text-left"
+                  >
+                    <Image
+                      src={card.coverSrc}
+                      alt={card.projectTitle}
+                      fill
+                      sizes="(max-width: 640px) 152px, 176px"
+                      className="object-cover transition-transform duration-500 group-hover/frame:scale-105"
+                    />
+
+                    {/* 胶卷项目标签覆盖层 */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent opacity-0 group-hover/frame:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-2.5">
+                      <span className="text-xs font-sans font-medium text-white line-clamp-1 drop-shadow-sm">
+                        {card.projectTitle}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 底部齿孔条 */}
+            <div className="flex justify-end items-center px-4 pt-2 overflow-hidden gap-3 border-t border-neutral-800/80 shrink-0">
+              {Array.from({ length: 48 }).map((_, i) => (
+                <div
+                  key={`photo-bottom-sprocket-${i}`}
+                  className="h-2 w-1.5 shrink-0 rounded-xs bg-neutral-700/80 border border-neutral-600/30"
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* 收起状态的刚性立体暗盒：严格锁死尺寸在最右侧，绝无任何拉伸形变 */}
+          <div
+            className={cn(
+              "w-14 sm:w-16 h-full absolute right-0 top-0 flex flex-col items-center justify-between py-4 select-none pointer-events-none z-20",
+              activeStrip === "photo"
+                ? "opacity-0 pointer-events-none transition-opacity duration-150 delay-0"
+                : "opacity-100 transition-opacity duration-250 delay-[250ms]"
+            )}
+          >
+            {/* 胶卷引带舌片（左侧微凸） */}
+            <div className="absolute top-1/2 -translate-y-1/2 -left-1 w-1.5 h-9 bg-neutral-950/80 rounded-l-xs pointer-events-none" />
+
+            {/* 顶部金属转钮 */}
+            <div className="w-8 h-2 rounded-full bg-neutral-700 border border-neutral-600 shadow-inner shrink-0 flex items-center justify-center">
+              <div className="w-2 h-1 rounded-full bg-neutral-900" />
+            </div>
+
+            {/* 纯净竖排大字：照片 */}
+            <span className="my-auto text-sm sm:text-[15px] font-sans font-bold tracking-[0.3em] text-neutral-300 group-hover:text-white transition-colors [writing-mode:vertical-rl] select-none">
+              照片
+            </span>
+
+            {/* 底部金属转钮 */}
+            <div className="w-8 h-2 rounded-full bg-neutral-700 border border-neutral-600 shadow-inner shrink-0 flex items-center justify-center">
+              <div className="w-2 h-1 rounded-full bg-neutral-900" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ==================== 3. 统一多级画廊系统（总照片墙 Level 2 / 单张大图灯箱 Level 3） ==================== */}
+      <AnimatePresence>
+        {isGalleryOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => {
+              if (activePhotoState !== null) {
+                setActivePhotoState(null);
+              } else {
+                setIsGalleryOpen(false);
+              }
+            }}
+            className="fixed inset-0 z-50 bg-white/95 dark:bg-[#0c0c0c]/95 text-neutral-900 dark:text-neutral-100 backdrop-blur-md flex flex-col items-center justify-between p-4 sm:p-7 select-none overflow-hidden transition-colors"
+          >
+            {/* 
+              顶部工具栏（无分割线，右侧严格对齐照片网格右边界）：
+              左侧标题，右侧动态图标（大图时为返回相册图标，画廊时为 X 关闭）
+            */}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-5xl flex items-center justify-between pb-3 z-10 shrink-0 px-1"
+            >
+              {/* 左侧：纯粹标题（去除了多余的返回相册按钮） */}
+              <div className="flex items-center min-w-0">
+                <span className="text-sm sm:text-base font-sans font-bold tracking-tight truncate max-w-[65vw] sm:max-w-xl">
+                  {activePhotoState !== null ? activePhotoState.project.title : "摄影作品 · 画廊"}
+                </span>
+              </div>
+
+              {/* 右侧：关闭/返回按钮（统一为 X 图标） */}
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (activePhotoState !== null) {
+                      setActivePhotoState(null);
+                    } else {
+                      setIsGalleryOpen(false);
+                    }
+                  }}
+                  className="p-1.5 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer"
+                  aria-label={activePhotoState !== null ? "返回相册" : "关闭"}
+                  title={activePhotoState !== null ? "返回相册" : "关闭"}
+                >
+                  <X className="size-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* 
+              视图主体：
+              Level 2: 总照片墙网格（一级分类：全部、TodayWellSpent、个人摄影；TWS 二级胶囊）
+              Level 3: 单张大图灯箱放大查看
+            */}
+            {activePhotoState === null ? (
+              /* ==================== Level 2: 完整照片墙网格 ==================== */
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-5xl flex-1 overflow-y-auto my-auto py-3 px-1 flex flex-col"
+              >
+                {/* 
+                  一级分类胶囊：横向手风琴连体药丸条，使用 startTransition 彻底解决卡顿 
+                */}
+                <div className="inline-flex items-center p-1 rounded-full bg-neutral-100 dark:bg-neutral-800/90 border border-neutral-200/80 dark:border-neutral-700/80 shrink-0 self-start mb-2 overflow-x-auto scrollbar-none max-w-full">
+                  {[
+                    { id: "all" as const, label: "全部", count: 207 },
+                    { id: "tws" as const, label: "TodayWellSpent", count: 197 },
+                    { id: "personal" as const, label: "个人摄影", count: 10 },
+                  ].map((cat) => {
+                    const isActive = mainCategory === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => handleSelectMainCategory(cat.id)}
+                        className={cn(
+                          "relative rounded-full text-xs font-sans whitespace-nowrap transition-colors cursor-pointer select-none z-10 flex items-center gap-1.5",
+                          isActive
+                            ? "px-4 py-1.5 font-semibold text-white dark:text-neutral-900"
+                            : "px-3 py-1.5 font-medium text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white"
+                        )}
+                      >
+                        {isActive && (
+                          <motion.div
+                            layoutId="mainCategoryPill"
+                            transition={PILL_SPRING}
+                            className="absolute inset-0 rounded-full bg-neutral-900 dark:bg-white shadow-sm -z-10"
+                          />
+                        )}
+                        <span>{cat.label}</span>
+                        <span
+                          className={cn(
+                            "text-[10px] tabular-nums font-mono",
+                            isActive ? "opacity-90" : "opacity-60"
+                          )}
+                        >
+                          ({cat.count})
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* 
+                  TodayWellSpent 二级项目胶囊（与父胶囊统一为圆角 rounded-full，分两排排列） 
+                */}
+                <AnimatePresence>
+                  {mainCategory === "tws" && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0, y: -4 }}
+                      animate={{ opacity: 1, height: "auto", y: 0 }}
+                      exit={{ opacity: 0, height: 0, y: -4 }}
+                      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                      className="mb-3 shrink-0 overflow-hidden"
+                    >
+                      <div className="grid grid-rows-2 grid-flow-col auto-cols-max gap-1.5 overflow-x-auto scrollbar-none py-0.5 max-w-full">
+                        <button
+                          type="button"
+                          onClick={() => handleSelectTwsSubCategory("all")}
+                          className={cn(
+                            "px-3 py-1 rounded-full text-xs font-sans whitespace-nowrap transition-all cursor-pointer text-left border",
+                            twsSubCategory === "all"
+                              ? "bg-neutral-800 text-white dark:bg-white dark:text-neutral-900 font-semibold border-transparent shadow-xs"
+                              : "bg-neutral-100 dark:bg-neutral-800/80 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white border-neutral-200/70 dark:border-neutral-700/70"
+                          )}
+                        >
+                          全部 TWS 项目 (197)
+                        </button>
+
+                        {photoProjects
+                          .filter((p) => p.group === "tws")
+                          .map((p) => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => handleSelectTwsSubCategory(p.id)}
+                              className={cn(
+                                "px-3 py-1 rounded-full text-xs font-sans whitespace-nowrap transition-all cursor-pointer text-left border",
+                                twsSubCategory === p.id
+                                  ? "bg-neutral-800 text-white dark:bg-white dark:text-neutral-900 font-semibold border-transparent shadow-xs"
+                                  : "bg-neutral-100 dark:bg-neutral-800/80 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white border-neutral-200/70 dark:border-neutral-700/70"
+                              )}
+                            >
+                              {p.title} ({p.photos.length})
+                            </button>
+                          ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* 照片网格展示（稳定永久 Key + 视口分批加载 + content-visibility，彻底解决卡顿） */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pt-1">
+                  {visiblePhotos.map((item) => (
+                    <button
+                      key={`photo-${item.project.id}-${item.indexInProject}`}
+                      type="button"
+                      onClick={() => handleSelectPhotoToLightbox(item)}
+                      className="relative aspect-[4/3] rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 group transition-all duration-200 hover:scale-[1.01] hover:border-neutral-400 cursor-pointer text-left shadow-2xs [content-visibility:auto] [contain-intrinsic-size:240px_180px]"
+                    >
+                      <Image
+                        src={item.src}
+                        alt=""
+                        fill
+                        sizes="(max-width: 640px) 45vw, 220px"
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                      {/* 项目名浮层 */}
+                      <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="text-[11px] font-sans font-medium text-white truncate block drop-shadow-sm">
+                          {item.project.title}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              /* ==================== Level 3: 单张大图灯箱放大查看 ==================== */
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="relative w-full max-w-5xl px-1 flex-1 flex items-center justify-center my-auto min-h-0"
+              >
+                {/* 居中大图核心区 */}
+                <div className="relative w-full max-w-4xl h-[68vh] max-h-[72vh] flex items-center justify-center mx-auto">
+                  <Image
+                    src={activePhotoState.project.photos[activePhotoState.photoIndex]}
+                    alt={`${activePhotoState.project.title} #${activePhotoState.photoIndex + 1}`}
+                    fill
+                    sizes="(max-width: 1024px) 95vw, 1000px"
+                    className="object-contain drop-shadow-2xl rounded-sm select-none"
+                    priority
+                  />
+                </div>
+
+                {/* 上一张按钮（与右侧按钮反过来对称计算，实现全局居中） */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setActivePhotoState((prev) => {
+                      if (!prev) return null;
+                      const total = prev.project.photos.length;
+                      const nextIdx = prev.photoIndex === 0 ? total - 1 : prev.photoIndex - 1;
+                      return { ...prev, photoIndex: nextIdx };
+                    })
+                  }
+                  className="absolute left-1 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer z-20"
+                  aria-label="上一张照片"
+                >
+                  <ChevronLeft className="size-6" />
+                </button>
+
+                {/* 下一张按钮（右侧与右上角 X 关闭按钮严格垂直右对齐） */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setActivePhotoState((prev) => {
+                      if (!prev) return null;
+                      const total = prev.project.photos.length;
+                      const nextIdx = prev.photoIndex === total - 1 ? 0 : prev.photoIndex + 1;
+                      return { ...prev, photoIndex: nextIdx };
+                    })
+                  }
+                  className="absolute right-1 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer z-20"
+                  aria-label="下一张照片"
+                >
+                  <ChevronRight className="size-6" />
+                </button>
+              </div>
+            )}
+
+            {/* 
+              照片数量：居中显示在大图下方、胶带缩略图正上方 
+            */}
+            {activePhotoState !== null && (
+              <div className="w-full text-center text-xs font-mono text-neutral-500 dark:text-neutral-400 py-1 shrink-0 select-none">
+                {activePhotoState.photoIndex + 1} / {activePhotoState.project.photos.length}
+              </div>
+            )}
+
+            {/* 
+              在大图模式下，底部提供当前项目全部照片的横向胶带缩略图，
+              支持电影级居中定位算法与本地高亮框（绝不飞出胶带范围） 
+            */}
+            {activePhotoState !== null && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                ref={stripContainerRef}
+                className="w-full max-w-2xl overflow-x-auto py-1 shrink-0 flex items-center justify-start gap-1.5 scrollbar-none px-4 relative"
+              >
+                {activePhotoState.project.photos.map((thumbSrc, tIdx) => {
+                  const isActive = tIdx === activePhotoState.photoIndex;
+                  return (
+                    <button
+                      key={`thumb-strip-${activePhotoState.project.id}-${tIdx}`}
+                      ref={(el) => {
+                        thumbRefs.current[tIdx] = el;
+                      }}
+                      type="button"
+                      onClick={() =>
+                        setActivePhotoState((prev) =>
+                          prev ? { ...prev, photoIndex: tIdx } : null
+                        )
+                      }
+                      className={cn(
+                        "relative size-9 sm:size-10 shrink-0 rounded-xs overflow-hidden transition-all cursor-pointer",
+                        isActive
+                          ? "opacity-100 scale-105"
+                          : "opacity-45 hover:opacity-85 border border-neutral-300 dark:border-neutral-800"
+                      )}
+                    >
+                      <Image
+                        src={thumbSrc}
+                        alt=""
+                        fill
+                        sizes="40px"
+                        className="object-cover"
+                      />
+                      {/* 本地发光高亮框（锁死在当前按钮内部，绝不可能跳出胶带范围） */}
+                      {isActive && (
+                        <div className="absolute inset-0 rounded-xs border-2 border-[#3b82f6] shadow-[0_0_8px_rgba(59,130,246,0.7)] pointer-events-none" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}

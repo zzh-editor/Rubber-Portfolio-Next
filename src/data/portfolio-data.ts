@@ -59,15 +59,7 @@ export const personalProfile = {
       metaLabel: "PDF · A4 · 641 KB",
       ariaLabel: "下载简历 PDF",
     },
-    aboutPhotos: [
-      "/images/about-pics/about-1.jpg",
-      "/images/about-pics/about-2.jpeg",
-      "/images/about-pics/about-3.JPG",
-      "/images/about-pics/about-5.jpeg",
-      "/images/about-pics/about-6.jpeg",
-      "/images/about-pics/about-7.JPG",
-      "/images/about-pics/about-8.jpg",
-    ],
+    aboutPhotos: [],
   },
 };
 
@@ -97,7 +89,6 @@ export const workExperiences: WorkExperienceItem[] = [
       "直播技术方案设计：硬件选型、OBS 推流、多机位切换、3 套直播场景（产品展示、嘉宾访谈、互动答疑）。",
       "视觉包装：直播间片头片尾动画、字幕条模板、产品展示卡片、直播间灯光与布景调试。",
     ],
-    achievement: "从 0 到 1 搭建完整直播体系，成功执行多场品牌直播，建立可复用技术方案。",
   },
   {
     id: "neon-now",
@@ -149,16 +140,14 @@ export const projectsPage = {
     {
       id: 1,
       title: "我们「偷窥」了爱人们的深度对话",
-      imageSrc:
-        "https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/render/image/public/project-uploads/3bd439dd-30d3-4cf6-a7a5-460a895a6f18/1-1775406790136.png",
+      imageSrc: "/images/thumbnails/lovers-talk.png",
       videoUrl: "https://vimeo.com/1180287591",
       platform: "vimeo",
     },
     {
       id: 3,
       title: "巴西战舞神经科学工作坊",
-      imageSrc:
-        "https://slelguoygbfzlpylpxfs.supabase.co/storage/v1/render/image/public/project-uploads/3bd439dd-30d3-4cf6-a7a5-460a895a6f18/3-1775407055078.png",
+      imageSrc: "/images/thumbnails/capoeira.png",
       videoUrl: "https://vimeo.com/1180288148",
       platform: "vimeo",
     },
@@ -209,6 +198,13 @@ export const projectsPage = {
       title: "对话｜超马跑者郭瑛彤：女人强起来，就像女人一样",
       imageSrc: "/images/thumbnails/bilibili-4.jpg",
       videoUrl: "https://www.bilibili.com/video/BV1zsNuzREZE/",
+      platform: "bilibili",
+    },
+    {
+      id: 11,
+      title: "A Trip to Vietnam",
+      imageSrc: "/images/thumbnails/a-trip-to-vietnam.jpg",
+      videoUrl: "https://www.bilibili.com/video/BV1Rcnb6oEgE/",
       platform: "bilibili",
     },
   ] satisfies ProjectItem[],

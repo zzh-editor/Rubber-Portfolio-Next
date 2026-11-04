@@ -1,28 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Noto_Sans_SC } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const notoSansSC = Noto_Sans_SC({
-  variable: "--font-noto-sans-sc",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
 export const metadata: Metadata = {
-  title: "张橡胶 / Rubber — 视频团队负责人 & 创作者",
+  title: "张壮浩",
   description:
-    "1998 年生于汕尾，从摄影工作室学徒到视频团队负责人。现负责游戏留学行业视频内容体系搭建，让创意可复制、质量可量化。",
+    "从摄影工作室学徒到视频团队负责人，8 年内容制作与团队管理沉淀。目前为游戏留学行业视频团队负责人。",
   icons: {
     icon: "/images/logo.png",
   },
@@ -31,8 +14,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FAFAFA" },
-    { media: "(prefers-color-scheme: dark)", color: "#0A0A0A" },
+    { media: "(prefers-color-scheme: light)", color: "#FFFFFF" },
+    { media: "(prefers-color-scheme: dark)", color: "#0C0C0C" },
   ],
 };
 
@@ -42,13 +25,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="zh-CN"
-      className={`${geistSans.variable} ${geistMono.variable} ${notoSansSC.variable}`}
-      data-theme="dark"
-      suppressHydrationWarning
-    >
-      <body className="min-h-screen flex flex-col antialiased">
+    <html lang="zh-CN" suppressHydrationWarning>
+      <body className="min-h-screen flex flex-col antialiased bg-white dark:bg-[#0C0C0C] text-neutral-900 dark:text-neutral-100 transition-colors duration-300 font-sans">
         <ThemeProvider>
           {children}
         </ThemeProvider>

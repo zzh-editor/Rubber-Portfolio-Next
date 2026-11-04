@@ -51,8 +51,8 @@ export function FadeBlurIn({
 
   return (
     <motion.div
-      initial={{ opacity: 0, filter: `blur(${blur})`, y: yOffset }}
-      animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
+      initial={{ opacity: 0, y: yOffset, filter: `blur(${blur})` }}
+      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
       transition={{
         duration,
         delay,
