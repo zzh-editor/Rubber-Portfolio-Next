@@ -1098,12 +1098,31 @@ function createEngine(
   let W = 1
   let H = 1
   let raf = 0
-  let running = true
+  let isLoopRunning = false
+  let inViewport = false
+  let isGalleryOpen = false
+  let isDocVisible = typeof document !== "undefined" ? !document.hidden : true
+  let scrollTriggerActive = true
   const start = performance.now()
 
+  const shouldRun = () => inViewport && !isGalleryOpen && isDocVisible && scrollTriggerActive
+
+  const updateLoop = () => {
+    const next = shouldRun()
+    if (next && !isLoopRunning) {
+      isLoopRunning = true
+      raf = requestAnimationFrame(frame)
+    } else if (!next && isLoopRunning) {
+      isLoopRunning = false
+      if (raf) {
+        cancelAnimationFrame(raf)
+        raf = 0
+      }
+    }
+  }
+
   const frame = () => {
-    raf = requestAnimationFrame(frame)
-    if (!running || !L) return
+    if (!isLoopRunning || !L) return
     const time = (performance.now() - start) / 1000
     renderer.clear()
     let top = -1
@@ -1174,17 +1193,45 @@ function createEngine(
       renderer.clearDepth()
       pass((i) => i === top, false)
     }
+
+    if (isLoopRunning) {
+      raf = requestAnimationFrame(frame)
+    }
   }
-  raf = requestAnimationFrame(frame)
+
+  const io = new IntersectionObserver(
+    ([entry]) => {
+      inViewport = entry.isIntersecting
+      updateLoop()
+    },
+    { threshold: 0.05 }
+  )
+  io.observe(host)
+
+  const onVisChange = () => {
+    isDocVisible = !document.hidden
+    updateLoop()
+  }
+  document.addEventListener("visibilitychange", onVisChange)
+
+  const onGalleryChange = (e: Event) => {
+    const customEvent = e as CustomEvent<{ isOpen?: boolean }>
+    isGalleryOpen = !!customEvent.detail?.isOpen
+    updateLoop()
+  }
+  window.addEventListener("gallery-visibility-change", onGalleryChange)
 
   const st = ScrollTrigger.create({
     trigger: host,
     start: "top bottom",
     end: "bottom top",
     onToggle: (self) => {
-      running = self.isActive
+      scrollTriggerActive = self.isActive
+      updateLoop()
     },
   })
+
+  updateLoop()
 
   return {
     target(i) {
@@ -1224,7 +1271,11 @@ function createEngine(
       if (first && !reduced) intro()
     },
     dispose() {
-      cancelAnimationFrame(raf)
+      isLoopRunning = false
+      if (raf) cancelAnimationFrame(raf)
+      io.disconnect()
+      document.removeEventListener("visibilitychange", onVisChange)
+      window.removeEventListener("gallery-visibility-change", onGalleryChange)
       st.kill()
       items.forEach((it) => {
         gsap.killTweensOf(it.state)

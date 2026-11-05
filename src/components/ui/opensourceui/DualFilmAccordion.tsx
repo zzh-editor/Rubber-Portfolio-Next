@@ -13,7 +13,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence, type Transition } from "motion/react";
 import { Play, X, ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getThumbSrc } from "@/lib/utils";
 import { type ProjectItem } from "@/data/portfolio-data";
 import {
   photoProjects,
@@ -53,7 +53,7 @@ const PILL_SPRING: Transition = {
 };
 
 // 分批无限加载步长
-const BATCH_SIZE = 24;
+const BATCH_SIZE = 36;
 
 export function DualFilmAccordion({
   videoItems,
@@ -97,6 +97,18 @@ export function DualFilmAccordion({
 
   // 当前大图放大查看的照片在当前分类列表中的索引（null 为相册网格模式，number 为当前分类下的大图模式）
   const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
+
+  // 全屏相册开启状态全局事件通知（用于让页面停止背景视频解码与 Three.js 动画循环，节省 GPU/CPU）
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("gallery-visibility-change", {
+        detail: { isOpen: isGalleryOpen },
+      })
+    );
+    if (typeof document !== "undefined") {
+      document.body.dataset.galleryOpen = isGalleryOpen ? "true" : "false";
+    }
+  }, [isGalleryOpen]);
 
   // 监听画廊打开状态以启动/清除 5 秒提示计时器（5秒内无操作则提示返回按钮）
   useEffect(() => {
@@ -149,9 +161,8 @@ export function DualFilmAccordion({
     setActiveStrip(target);
   };
 
-  // 缩略图滚动容器引用与每个缩略图的 DOM 引用（用于精准平滑居中定位）
+  // 缩略图滚动容器引用（用于纯数学定位，消除 DOM 查询导致的 Forced Layout）
   const stripContainerRef = useRef<HTMLDivElement>(null);
-  const thumbRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // 监听外部事件（例如工作板块 TodayWellSpent 的「👀 看看照片」按钮）
   useEffect(() => {
@@ -201,11 +212,6 @@ export function DualFilmAccordion({
     return list;
   }, [deferredMainCategory, deferredTwsSubCategory]);
 
-  // 分类变化时重置缩略图引用列表
-  useEffect(() => {
-    thumbRefs.current = [];
-  }, [deferredMainCategory, deferredTwsSubCategory]);
-
   // 视口分批渲染列表（初始 24 张，触底流式无限加载）
   const visiblePhotos = useMemo(() => {
     return displayPhotos.slice(0, renderLimit);
@@ -235,6 +241,21 @@ export function DualFilmAccordion({
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [isGalleryOpen, activePhotoIndex, displayPhotos.length]);
+
+  // 滚动触底流式加载（双重保险：不仅依靠 IntersectionObserver，在滚动时动态检测剩余高度，100% 灵敏追加下一批）
+  const handleGalleryScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      handleUserActivity();
+      const target = e.currentTarget;
+      if (target.scrollHeight - target.scrollTop - target.clientHeight < 600) {
+        setRenderLimit((prev) => {
+          if (prev >= displayPhotos.length) return prev;
+          return Math.min(prev + BATCH_SIZE, displayPhotos.length);
+        });
+      }
+    },
+    [displayPhotos.length, handleUserActivity]
+  );
 
   // 从主页照片胶卷点击任意图片：进入总照片墙网格（Level 2）
   const handleOpenGeneralGallery = () => {
@@ -267,27 +288,24 @@ export function DualFilmAccordion({
     handleUserActivity();
   }, [displayPhotos.length, handleUserActivity]);
 
-  // 电影级胶带定位算法（依据物理绝对坐标，当前选中的图片在胶带水平轴物理居中，仅在边缘图片不足时移动高亮框）
+  // 电影级胶带定位算法（纯数学固定间距计算，零 DOM 依赖，彻底消除 forced reflow 导致的掉帧）
   useEffect(() => {
     if (activePhotoIndex === null) return;
 
     const container = stripContainerRef.current;
-    const targetBtn = thumbRefs.current[activePhotoIndex];
-    if (!container || !targetBtn) return;
+    if (!container) return;
 
-    const animId = requestAnimationFrame(() => {
-      const btnCenter = targetBtn.offsetLeft + targetBtn.offsetWidth / 2;
-      const idealScroll = btnCenter - container.clientWidth / 2;
-      const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth);
-      const targetScroll = Math.max(0, Math.min(maxScroll, idealScroll));
+    const isSm = typeof window !== "undefined" && window.innerWidth >= 640;
+    const itemWidth = (isSm ? 40 : 36) + 6; // size-9 (36px) / size-10 (40px) + gap-1.5 (6px)
+    const targetLeft = Math.max(
+      0,
+      activePhotoIndex * itemWidth + (itemWidth - 6) / 2 - container.clientWidth / 2
+    );
 
-      container.scrollTo({
-        left: targetScroll,
-        behavior: "smooth",
-      });
+    container.scrollTo({
+      left: targetLeft,
+      behavior: "smooth",
     });
-
-    return () => cancelAnimationFrame(animId);
   }, [activePhotoIndex]);
 
   // 移动端灯箱触摸滑动手势支持
@@ -361,7 +379,7 @@ export function DualFilmAccordion({
     };
   }, [isGalleryOpen, handleKeyDown]);
 
-  // 当前大图对象
+  // 当前大图对象（高清原图）
   const currentPhoto = activePhotoIndex !== null ? displayPhotos[activePhotoIndex] : null;
 
   return (
@@ -406,9 +424,14 @@ export function DualFilmAccordion({
               ))}
             </div>
 
-            {/* 视频卡片无限循环滚动轨道 */}
+            {/* 视频卡片无限循环滚动轨道（当全屏画廊开启时暂停 CSS 动画，节约 GPU 开销） */}
             <div className="relative w-full py-1 overflow-hidden my-auto">
-              <div className="flex gap-3.5 w-max animate-film-strip-marquee group-hover:[animation-play-state:paused]">
+              <div
+                className={cn(
+                  "flex gap-3.5 w-max animate-film-strip-marquee group-hover:[animation-play-state:paused]",
+                  isGalleryOpen && "[animation-play-state:paused]"
+                )}
+              >
                 {loopedVideos.map((item, idx) => (
                   <Link
                     key={`video-${item.id}-${idx}`}
@@ -423,6 +446,7 @@ export function DualFilmAccordion({
                       fill
                       sizes="(max-width: 640px) 160px, 192px"
                       className="object-cover transition-transform duration-500 group-hover/frame:scale-105"
+                      decoding="async"
                     />
 
                     {/* 暗色浮层 */}
@@ -515,9 +539,14 @@ export function DualFilmAccordion({
               ))}
             </div>
 
-            {/* 随机6张代表作无限循环滚动轨道 */}
+            {/* 随机6张代表作无限循环滚动轨道（使用轻量 480px WebP 缩略图；全屏画廊开启时暂停动画） */}
             <div className="relative w-full py-1 overflow-hidden my-auto">
-              <div className="flex gap-3.5 w-max animate-film-strip-marquee group-hover:[animation-play-state:paused] justify-end">
+              <div
+                className={cn(
+                  "flex gap-3.5 w-max animate-film-strip-marquee group-hover:[animation-play-state:paused] justify-end",
+                  isGalleryOpen && "[animation-play-state:paused]"
+                )}
+              >
                 {loopedPhotos.map((card, idx) => (
                   <button
                     key={`photo-loop-${card.projectId}-${card.photoIndex}-${idx}`}
@@ -526,11 +555,16 @@ export function DualFilmAccordion({
                     className="relative block h-28 w-38 sm:h-32 sm:w-44 shrink-0 overflow-hidden rounded-xs border-2 border-neutral-800 bg-neutral-950 group/frame transition-all duration-300 hover:border-neutral-400 hover:scale-[1.02] cursor-pointer text-left"
                   >
                     <Image
-                      src={card.coverSrc}
+                      src={getThumbSrc(card.coverSrc)}
                       alt={card.projectTitle}
                       fill
                       sizes="(max-width: 640px) 152px, 176px"
                       className="object-cover transition-transform duration-500 group-hover/frame:scale-105"
+                      decoding="async"
+                      onError={(e) => {
+                        const t = e.currentTarget as HTMLImageElement;
+                        if (t.src !== card.coverSrc) t.src = card.coverSrc;
+                      }}
                     />
 
                     {/* 胶卷项目标签覆盖层 */}
@@ -592,7 +626,8 @@ export function DualFilmAccordion({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.18 }}
+            style={{ willChange: "opacity" }}
             onClick={() => {
               if (activePhotoIndex !== null) {
                 setActivePhotoIndex(null);
@@ -600,44 +635,24 @@ export function DualFilmAccordion({
                 setIsGalleryOpen(false);
               }
             }}
-            className="fixed inset-0 z-50 bg-white/95 dark:bg-[#0c0c0c]/95 text-neutral-900 dark:text-neutral-100 backdrop-blur-md flex flex-col items-center justify-between pt-5 px-5 pb-5 sm:p-6 select-none overflow-hidden transition-colors"
+            className="fixed inset-0 z-50 bg-neutral-50/[0.98] dark:bg-[#0c0c0c]/[0.98] text-neutral-900 dark:text-neutral-100 flex flex-col items-center justify-between pt-5 px-5 pb-5 sm:pt-8 sm:px-8 sm:pb-8 select-none overflow-hidden transition-colors"
           >
             {/* 
-              顶部工具栏（h-9，与 fixed top-5 right-5 的 ThemeToggle 垂直中轴线绝对水平对齐，底边与胶囊预留安全间距）：
-              左侧标题 / X 返回相册按钮，右侧照片数量与桌面端 X 关闭按钮（移动端右侧预留 w-9 空间给日夜切换按钮）
+              顶部工具栏（h-9 sm:h-10，与 fixed top-5 right-5 sm:top-8 sm:right-8 的 ThemeToggle 垂直中轴线绝对水平对齐）：
+              左侧标题（删掉返回按钮，纯文本展示），右侧照片数量与桌面端 X 关闭/返回按钮（与下一张按钮右对齐）
             */}
             <div
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-5xl h-9 flex items-center justify-between mb-3.5 z-10 shrink-0"
+              className="w-full max-w-5xl h-9 sm:h-10 flex items-center justify-between mb-3.5 z-10 shrink-0"
             >
-              {/* 左侧：精简 X 返回按钮（大图模式）或标题（画廊总览） */}
-              <div className="flex items-center gap-2 min-w-0">
-                {currentPhoto ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActivePhotoIndex(null);
-                        handleUserActivity();
-                      }}
-                      className="p-1.5 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer shrink-0"
-                      aria-label="返回相册"
-                      title="返回相册"
-                    >
-                      <X className="size-4.5" />
-                    </button>
-                    <span className="text-sm sm:text-base font-sans font-bold tracking-tight truncate max-w-[50vw] sm:max-w-xl">
-                      {currentPhoto.project.title}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-sm sm:text-base font-sans font-bold tracking-tight truncate max-w-[60vw] sm:max-w-xl">
-                    摄影作品 · 画廊
-                  </span>
-                )}
+              {/* 左侧：标题（大图模式显示项目名称，画廊模式显示摄影作品·画廊，左侧无冗余返回按钮） */}
+              <div className="flex items-center min-w-0">
+                <span className="text-sm sm:text-base font-sans font-bold tracking-tight truncate max-w-[60vw] sm:max-w-xl">
+                  {currentPhoto ? currentPhoto.project.title : "摄影作品 · 画廊"}
+                </span>
               </div>
 
-              {/* 右侧：照片数量统计与桌面端 X 关闭按钮；移动端预留 w-9 占位让位于日夜切换按钮 */}
+              {/* 右侧：照片数量统计与桌面端 X 关闭/返回按钮（与下方下一张照片按钮绝对右对齐）；移动端预留 w-9 占位让位于日夜切换按钮 */}
               <div className="flex items-center gap-3 shrink-0">
                 {activePhotoIndex === null && (
                   <span className="text-xs font-mono text-neutral-500 dark:text-neutral-400 select-none hidden sm:inline">
@@ -653,7 +668,7 @@ export function DualFilmAccordion({
                       setIsGalleryOpen(false);
                     }
                   }}
-                  className="hidden sm:flex p-1.5 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer"
+                  className="hidden sm:flex items-center justify-center size-10 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer"
                   aria-label={activePhotoIndex !== null ? "返回相册" : "关闭"}
                   title={activePhotoIndex !== null ? "返回相册" : "关闭"}
                 >
@@ -673,7 +688,7 @@ export function DualFilmAccordion({
               /* ==================== Level 2: 完整照片墙网格 ==================== */
               <div
                 ref={galleryScrollContainerRef}
-                onScroll={handleUserActivity}
+                onScroll={handleGalleryScroll}
                 onClick={(e) => e.stopPropagation()}
                 className="w-full max-w-5xl flex-1 overflow-y-auto my-auto py-1 flex flex-col scrollbar-none"
               >
@@ -768,30 +783,39 @@ export function DualFilmAccordion({
                   )}
                 </AnimatePresence>
 
-                {/* 照片网格展示（稳定永久全局唯一 Key + 视口分批无限触底加载 + content-visibility） */}
+                {/* 照片网格展示（使用 480px WebP 缩略图 + content-visibility 离屏跳过渲染 + decoding="async"） */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pt-1">
-                  {visiblePhotos.map((item, idx) => (
-                    <button
-                      key={`grid-photo-${item.project.id}-${item.indexInProject}-${idx}`}
-                      type="button"
-                      onClick={() => handleSelectPhotoToLightbox(idx)}
-                      className="relative aspect-[4/3] rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 group transition-all duration-200 hover:scale-[1.01] hover:border-neutral-400 cursor-pointer text-left shadow-2xs [content-visibility:auto] [contain-intrinsic-size:240px_180px]"
-                    >
-                      <Image
-                        src={item.src}
-                        alt=""
-                        fill
-                        sizes="(max-width: 640px) 45vw, 220px"
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                      {/* 项目名浮层 */}
-                      <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="text-[11px] font-sans font-medium text-white truncate block drop-shadow-sm">
-                          {item.project.title}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
+                  {visiblePhotos.map((item, idx) => {
+                    const thumbUrl = getThumbSrc(item.src);
+                    return (
+                      <button
+                        key={`grid-photo-${item.project.id}-${item.indexInProject}-${idx}`}
+                        type="button"
+                        onClick={() => handleSelectPhotoToLightbox(idx)}
+                        className="relative aspect-[4/3] rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 group transition-transform duration-300 will-change-transform hover:scale-[1.01] hover:border-neutral-400 cursor-pointer text-left shadow-2xs [content-visibility:auto] [contain-intrinsic-size:auto_280px]"
+                      >
+                        <Image
+                          src={thumbUrl}
+                          alt=""
+                          fill
+                          sizes="(max-width: 640px) 45vw, 220px"
+                          className="object-cover transition-transform duration-300 group-hover:scale-105"
+                          decoding="async"
+                          loading={idx < 8 ? "eager" : "lazy"}
+                          onError={(e) => {
+                            const t = e.currentTarget as HTMLImageElement;
+                            if (t.src !== item.src) t.src = item.src;
+                          }}
+                        />
+                        {/* 项目名浮层 */}
+                        <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                          <span className="text-[11px] font-sans font-medium text-white truncate block drop-shadow-sm">
+                            {item.project.title}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {/* 触底加载哨兵 */}
@@ -805,7 +829,7 @@ export function DualFilmAccordion({
                 onTouchEnd={handleTouchEnd}
                 className="relative w-full max-w-5xl flex-1 flex items-center justify-center my-auto min-h-0"
               >
-                {/* 居中大图核心区 */}
+                {/* 居中大图核心区（仅大图加载高清原图） */}
                 <div className="relative w-full max-w-4xl h-[66vh] max-h-[70vh] flex items-center justify-center mx-auto">
                   {currentPhoto && (
                     <Image
@@ -815,29 +839,56 @@ export function DualFilmAccordion({
                       sizes="(max-width: 1024px) 95vw, 1000px"
                       className="object-contain drop-shadow-2xl rounded-sm select-none"
                       priority
+                      decoding="async"
                     />
                   )}
                 </div>
 
-                {/* 上一张按钮（桌面端展示，移动端隐藏改用滑动手势） */}
+                {/* 上一张按钮（桌面端展示，左对齐 max-w-5xl 容器边缘，移动端隐藏改用滑动手势） */}
                 <button
                   type="button"
                   onClick={handlePrevPhoto}
-                  className="hidden sm:flex absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer z-20"
+                  className="hidden sm:flex items-center justify-center size-10 rounded-full absolute left-0 top-1/2 -translate-y-1/2 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer z-20"
                   aria-label="上一张照片"
                 >
                   <ChevronLeft className="size-6" />
                 </button>
 
-                {/* 下一张按钮（桌面端展示，移动端隐藏改用滑动手势） */}
+                {/* 下一张按钮（桌面端展示，与顶部 X 按钮严格右对齐，移动端隐藏改用滑动手势） */}
                 <button
                   type="button"
                   onClick={handleNextPhoto}
-                  className="hidden sm:flex absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer z-20"
+                  className="hidden sm:flex items-center justify-center size-10 rounded-full absolute right-0 top-1/2 -translate-y-1/2 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer z-20"
                   aria-label="下一张照片"
                 >
                   <ChevronRight className="size-6" />
                 </button>
+
+                {/* 仅在 Lightbox 模式下预加载相邻上一张与下一张的高清大图，避免一次性并发请求 */}
+                {activePhotoIndex !== null && (
+                  <div className="hidden pointer-events-none" aria-hidden="true">
+                    {activePhotoIndex > 0 && (
+                      <Image
+                        src={displayPhotos[activePhotoIndex - 1].src}
+                        alt=""
+                        width={1}
+                        height={1}
+                        priority
+                        decoding="async"
+                      />
+                    )}
+                    {activePhotoIndex < displayPhotos.length - 1 && (
+                      <Image
+                        src={displayPhotos[activePhotoIndex + 1].src}
+                        alt=""
+                        width={1}
+                        height={1}
+                        priority
+                        decoding="async"
+                      />
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -851,8 +902,9 @@ export function DualFilmAccordion({
             )}
 
             {/* 
-              在大图模式下，底部提供当前分类全部照片的横向胶带缩略图，
-              支持电影级居中定位算法与本地高亮框（让当前图片在横向轴物理中间） 
+              在大图模式下，底部提供当前分类照片的横向胶带缩略图条：
+              1. 虚拟切片渲染：当前索引前后各 15 张渲染轻量 WebP 缩略图，其余渲染轻量占位色块，杜绝 200+ 张图片同时挂载；
+              2. 纯数学滚动定位：彻底消除 DOM 读取与 Forced Layout Thrashing！
             */}
             {activePhotoIndex !== null && (
               <div
@@ -862,31 +914,41 @@ export function DualFilmAccordion({
               >
                 {displayPhotos.map((thumbItem, tIdx) => {
                   const isActive = tIdx === activePhotoIndex;
+                  const isNear = Math.abs(tIdx - activePhotoIndex) <= 15;
+                  const thumbUrl = getThumbSrc(thumbItem.src);
+
                   return (
                     <button
                       key={`thumb-${thumbItem.project.id}-${thumbItem.indexInProject}-${tIdx}`}
-                      ref={(el) => {
-                        thumbRefs.current[tIdx] = el;
-                      }}
                       type="button"
                       onClick={() => {
                         setActivePhotoIndex(tIdx);
                         handleUserActivity();
                       }}
                       className={cn(
-                        "relative size-9 sm:size-10 shrink-0 rounded-xs overflow-hidden transition-all cursor-pointer",
+                        "relative size-9 sm:size-10 shrink-0 rounded-xs overflow-hidden transition-transform cursor-pointer",
                         isActive
                           ? "opacity-100 scale-105"
-                          : "opacity-45 hover:opacity-85 border border-neutral-300 dark:border-neutral-800"
+                          : "opacity-45 hover:opacity-85 border border-neutral-300 dark:border-neutral-800",
+                        !isNear && "bg-neutral-200/50 dark:bg-neutral-800/50"
                       )}
+                      aria-label={`查看第 ${tIdx + 1} 张照片`}
                     >
-                      <Image
-                        src={thumbItem.src}
-                        alt=""
-                        fill
-                        sizes="40px"
-                        className="object-cover"
-                      />
+                      {isNear ? (
+                        <Image
+                          src={thumbUrl}
+                          alt=""
+                          fill
+                          sizes="40px"
+                          className="object-cover"
+                          decoding="async"
+                          loading="lazy"
+                          onError={(e) => {
+                            const t = e.currentTarget as HTMLImageElement;
+                            if (t.src !== thumbItem.src) t.src = thumbItem.src;
+                          }}
+                        />
+                      ) : null}
                       {/* 本地发光高亮框（锁死在当前缩略图内部，绝不可能跳出胶带范围） */}
                       {isActive && (
                         <div className="absolute inset-0 rounded-xs border-2 border-[#3b82f6] shadow-[0_0_8px_rgba(59,130,246,0.7)] pointer-events-none" />

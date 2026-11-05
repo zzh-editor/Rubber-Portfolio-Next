@@ -65,11 +65,9 @@ html[data-beui-vt="circle-blur"]::view-transition-new(root) {
 @keyframes beui-circle-blur-reveal {
   from {
     clip-path: circle(0% at var(--beui-vt-origin, 50% 50%));
-    filter: blur(12px);
   }
   to {
     clip-path: circle(150% at var(--beui-vt-origin, 50% 50%));
-    filter: blur(0px);
   }
 }
 
@@ -95,6 +93,7 @@ html[data-beui-vt="circle-blur"]::view-transition-new(root) {
 
 .animate-film-strip-marquee {
   animation: film-strip-marquee 40s linear infinite;
+  will-change: transform;
 }
 
 /* 鼠标悬停任意胶片卡片或轨道时立即停止滚动 */
