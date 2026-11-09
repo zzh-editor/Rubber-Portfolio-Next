@@ -3,6 +3,7 @@
 import React, {
   useState,
   useEffect,
+  useLayoutEffect,
   useCallback,
   useRef,
   useMemo,
@@ -39,6 +40,9 @@ function useRandomSixPhotos(): FilmPhotoCard[] {
     () => DEFAULT_SIX_PHOTOS
   );
 }
+
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 interface DualFilmAccordionProps {
   videoItems: ProjectItem[];
@@ -98,6 +102,12 @@ export function DualFilmAccordion({
   // 当前大图放大查看的照片在当前分类列表中的索引（null 为相册网格模式，number 为当前分类下的大图模式）
   const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
 
+  // 滚动位置持久化与灯箱退出恢复 Ref
+  const savedScrollTopRef = useRef<number>(0);
+  const openedPhotoIndexRef = useRef<number | null>(null);
+  const lastActivePhotoIndexRef = useRef<number | null>(null);
+  const prevActiveIndexRef = useRef<number | null>(null);
+
   // 全屏相册开启状态全局事件通知（用于让页面停止背景视频解码与 Three.js 动画循环，节省 GPU/CPU）
   useEffect(() => {
     window.dispatchEvent(
@@ -129,6 +139,9 @@ export function DualFilmAccordion({
       setMainCategory(catId);
       setTwsSubCategory("all");
       setRenderLimit(BATCH_SIZE);
+      savedScrollTopRef.current = 0;
+      openedPhotoIndexRef.current = null;
+      lastActivePhotoIndexRef.current = null;
       galleryScrollContainerRef.current?.scrollTo({ top: 0, behavior: "instant" });
       setShowReturnHint(false);
       setActivePhotoIndex(null);
@@ -145,6 +158,9 @@ export function DualFilmAccordion({
     (subId: string) => {
       setTwsSubCategory(subId);
       setRenderLimit(BATCH_SIZE);
+      savedScrollTopRef.current = 0;
+      openedPhotoIndexRef.current = null;
+      lastActivePhotoIndexRef.current = null;
       galleryScrollContainerRef.current?.scrollTo({ top: 0, behavior: "instant" });
       setShowReturnHint(false);
       setActivePhotoIndex(null);
@@ -280,6 +296,9 @@ export function DualFilmAccordion({
 
   // 在照片墙中点击某张照片：进入基于当前分类的全量图片灯箱（Level 3）
   const handleSelectPhotoToLightbox = (indexInDisplay: number) => {
+    savedScrollTopRef.current = galleryScrollContainerRef.current?.scrollTop ?? 0;
+    openedPhotoIndexRef.current = indexInDisplay;
+    lastActivePhotoIndexRef.current = indexInDisplay;
     setActivePhotoIndex(indexInDisplay);
     handleUserActivity();
   };
@@ -288,7 +307,9 @@ export function DualFilmAccordion({
   const handlePrevPhoto = useCallback(() => {
     setActivePhotoIndex((prev) => {
       if (prev === null) return null;
-      return prev === 0 ? displayPhotos.length - 1 : prev - 1;
+      const nextIdx = prev === 0 ? displayPhotos.length - 1 : prev - 1;
+      lastActivePhotoIndexRef.current = nextIdx;
+      return nextIdx;
     });
     handleUserActivity();
   }, [displayPhotos.length, handleUserActivity]);
@@ -297,10 +318,48 @@ export function DualFilmAccordion({
   const handleNextPhoto = useCallback(() => {
     setActivePhotoIndex((prev) => {
       if (prev === null) return null;
-      return prev === displayPhotos.length - 1 ? 0 : prev + 1;
+      const nextIdx = prev === displayPhotos.length - 1 ? 0 : prev + 1;
+      lastActivePhotoIndexRef.current = nextIdx;
+      return nextIdx;
     });
     handleUserActivity();
   }, [displayPhotos.length, handleUserActivity]);
+
+  // 从灯箱退出回相册网格时的滚动位置精确恢复与对齐
+  useIsomorphicLayoutEffect(() => {
+    const prevIndex = prevActiveIndexRef.current;
+    prevActiveIndexRef.current = activePhotoIndex;
+
+    // 当且仅当从 Level 3 (大图灯箱) 退出到 Level 2 (相册网格模式)
+    if (prevIndex !== null && activePhotoIndex === null) {
+      const container = galleryScrollContainerRef.current;
+      if (!container) return;
+
+      // 场景 1：用户未在灯箱翻页，或最后停留的照片与点进去的照片一致 -> 100% 精准恢复进入前的 scrollTop
+      if (prevIndex === openedPhotoIndexRef.current) {
+        container.scrollTop = savedScrollTopRef.current;
+        return;
+      }
+
+      // 场景 2：用户在灯箱中翻阅切换了其他照片 -> 确保渲染切片覆盖该照片，并将视野对齐到该照片
+      const targetIdx = prevIndex;
+      if (targetIdx >= renderLimit) {
+        setRenderLimit(Math.min(targetIdx + BATCH_SIZE, displayPhotos.length));
+      }
+
+      // 在下一帧将相册网格平滑对齐到退出时查看的照片
+      requestAnimationFrame(() => {
+        const cardEl = container.querySelector<HTMLElement>(
+          `[data-photo-grid-idx="${targetIdx}"]`
+        );
+        if (cardEl) {
+          cardEl.scrollIntoView({ block: "nearest", behavior: "instant" });
+        } else {
+          container.scrollTop = savedScrollTopRef.current;
+        }
+      });
+    }
+  }, [activePhotoIndex, renderLimit, displayPhotos.length]);
 
   // 电影级胶带定位算法（纯数学固定间距计算，零 DOM 依赖，彻底消除 forced reflow 导致的掉帧）
   useEffect(() => {
@@ -695,16 +754,19 @@ export function DualFilmAccordion({
 
             {/* 
               视图主体：
-              Level 2: 总照片墙网格（一级分类：全部、TodayWellSpent、个人摄影；TWS 二级胶囊）
-              Level 3: 单张大图灯箱放大查看（全量与当前分类完全同步）
+              通过外层相对定位容器包裹 Level 2（照片网格）与 Level 3（大图灯箱），
+              网格常驻 DOM 中，杜绝因卸载/挂载导致相册滚动位置丢失并重置为顶部
             */}
-            {activePhotoIndex === null ? (
-              /* ==================== Level 2: 完整照片墙网格 ==================== */
+            <div className="relative w-full max-w-5xl flex-1 my-auto min-h-0 flex flex-col items-center justify-center overflow-hidden">
+              {/* ==================== Level 2: 完整照片墙网格 ==================== */}
               <div
                 ref={galleryScrollContainerRef}
                 onScroll={handleGalleryScroll}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-5xl flex-1 overflow-y-auto my-auto py-1 flex flex-col scrollbar-none"
+                className={cn(
+                  "w-full h-full overflow-y-auto py-1 flex flex-col scrollbar-none",
+                  activePhotoIndex !== null ? "invisible pointer-events-none" : "visible pointer-events-auto"
+                )}
               >
                 {/* 
                   一级分类胶囊：横向手风琴连体药丸条，使用 startTransition 彻底解决卡顿 
@@ -805,6 +867,7 @@ export function DualFilmAccordion({
                       <button
                         key={`grid-photo-${item.project.id}-${item.indexInProject}-${idx}`}
                         type="button"
+                        data-photo-grid-idx={idx}
                         onClick={() => handleSelectPhotoToLightbox(idx)}
                         className="relative aspect-[4/3] rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 group transition-transform duration-300 will-change-transform hover:scale-[1.01] hover:border-neutral-400 cursor-pointer text-left shadow-2xs [content-visibility:auto] [contain-intrinsic-size:auto_280px]"
                       >
@@ -835,51 +898,51 @@ export function DualFilmAccordion({
                 {/* 触底加载哨兵 */}
                 <div ref={sentinelRef} className="h-10 w-full shrink-0" />
               </div>
-            ) : (
-              /* ==================== Level 3: 单张大图灯箱放大查看 ==================== */
-              <div
-                onClick={(e) => e.stopPropagation()}
-                onTouchStart={handleTouchStart}
-                onTouchEnd={handleTouchEnd}
-                className="relative w-full max-w-5xl flex-1 flex items-center justify-center my-auto min-h-0"
-              >
-                {/* 居中大图核心区（仅大图加载高清原图） */}
-                <div className="relative w-full max-w-4xl h-[66vh] max-h-[70vh] flex items-center justify-center mx-auto">
-                  {currentPhoto && (
-                    <Image
-                      src={currentPhoto.src}
-                      alt={`${currentPhoto.project.title} #${activePhotoIndex + 1}`}
-                      fill
-                      sizes="(max-width: 1024px) 95vw, 1000px"
-                      className="object-contain drop-shadow-2xl rounded-sm select-none"
-                      priority
-                      decoding="async"
-                    />
-                  )}
-                </div>
 
-                {/* 上一张按钮（桌面端展示，左对齐 max-w-5xl 容器边缘，移动端隐藏改用滑动手势） */}
-                <button
-                  type="button"
-                  onClick={handlePrevPhoto}
-                  className="hidden sm:flex items-center justify-center size-10 rounded-full absolute left-0 top-1/2 -translate-y-1/2 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer z-20"
-                  aria-label="上一张照片"
+              {/* ==================== Level 3: 单张大图灯箱放大查看 ==================== */}
+              {activePhotoIndex !== null && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  onTouchStart={handleTouchStart}
+                  onTouchEnd={handleTouchEnd}
+                  className="absolute inset-0 flex items-center justify-center my-auto min-h-0 z-20"
                 >
-                  <ChevronLeft className="size-6" />
-                </button>
+                  {/* 居中大图核心区（仅大图加载高清原图） */}
+                  <div className="relative w-full max-w-4xl h-[66vh] max-h-[70vh] flex items-center justify-center mx-auto">
+                    {currentPhoto && (
+                      <Image
+                        src={currentPhoto.src}
+                        alt={`${currentPhoto.project.title} #${activePhotoIndex + 1}`}
+                        fill
+                        sizes="(max-width: 1024px) 95vw, 1000px"
+                        className="object-contain drop-shadow-2xl rounded-sm select-none"
+                        priority
+                        decoding="async"
+                      />
+                    )}
+                  </div>
 
-                {/* 下一张按钮（桌面端展示，与顶部 X 按钮严格右对齐，移动端隐藏改用滑动手势） */}
-                <button
-                  type="button"
-                  onClick={handleNextPhoto}
-                  className="hidden sm:flex items-center justify-center size-10 rounded-full absolute right-0 top-1/2 -translate-y-1/2 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer z-20"
-                  aria-label="下一张照片"
-                >
-                  <ChevronRight className="size-6" />
-                </button>
+                  {/* 上一张按钮（桌面端展示，左对齐 max-w-5xl 容器边缘，移动端隐藏改用滑动手势） */}
+                  <button
+                    type="button"
+                    onClick={handlePrevPhoto}
+                    className="hidden sm:flex items-center justify-center size-10 rounded-full absolute left-0 top-1/2 -translate-y-1/2 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer z-20"
+                    aria-label="上一张照片"
+                  >
+                    <ChevronLeft className="size-6" />
+                  </button>
 
-                {/* 仅在 Lightbox 模式下预加载相邻上一张与下一张的高清大图，避免一次性并发请求 */}
-                {activePhotoIndex !== null && (
+                  {/* 下一张按钮（桌面端展示，与顶部 X 按钮严格右对齐，移动端隐藏改用滑动手势） */}
+                  <button
+                    type="button"
+                    onClick={handleNextPhoto}
+                    className="hidden sm:flex items-center justify-center size-10 rounded-full absolute right-0 top-1/2 -translate-y-1/2 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer z-20"
+                    aria-label="下一张照片"
+                  >
+                    <ChevronRight className="size-6" />
+                  </button>
+
+                  {/* 仅在 Lightbox 模式下预加载相邻上一张与下一张的高清大图，避免一次性并发请求 */}
                   <div className="hidden pointer-events-none" aria-hidden="true">
                     {activePhotoIndex > 0 && (
                       <Image
@@ -902,9 +965,9 @@ export function DualFilmAccordion({
                       />
                     )}
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
 
             {/* 
               照片数量：居中显示在大图下方、胶带缩略图正上方（显示当前分类下的张数，如 4 / 207）
@@ -937,6 +1000,7 @@ export function DualFilmAccordion({
                       type="button"
                       onClick={() => {
                         setActivePhotoIndex(tIdx);
+                        lastActivePhotoIndexRef.current = tIdx;
                         handleUserActivity();
                       }}
                       className={cn(
