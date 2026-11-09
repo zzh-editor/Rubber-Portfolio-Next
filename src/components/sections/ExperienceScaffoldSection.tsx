@@ -20,6 +20,10 @@ interface WorkExperienceDetail {
   }[];
   achievements?: string[];
   earlyItems?: string[];
+  openSourceRepos?: {
+    name: string;
+    url: string;
+  }[];
 }
 
 const detailedExperiences: WorkExperienceDetail[] = [
@@ -62,6 +66,32 @@ const detailedExperiences: WorkExperienceDetail[] = [
           "目标设定：制定季度 OKR（月均产出成片量、直播场次达标率、用户互动率提升），分解到组员个人目标。",
           "执行追踪：周例会回顾进度、调整优先级，月度复盘总结经验并持续迭代流程。",
         ],
+      },
+      {
+        label: "5. AI 提效",
+        items: [
+          "基于 Agent 以及结合公司实际的视频需求、品牌调性开发并调优各项 Skill。以 Video-Transcribe + SRT Enhancer Skill 为例，其自动转录+术语修复为一条一到两小时的录播课程或者英文的线下讲座缩短了 70% 以上的工作量。",
+          "基于 HyperFrames+OpenCode 开发 Video-Edit Skill，结合上述字幕转录技能，为直播切片、课程切片、口播执行字幕的自动对轨和动画图表、B-Roll 画面生成的同时，把每一条视频的 Token 开销压缩到 0.05 美元一条（以 ChatGPT 6.1 Luna 为例）。",
+          "开发 Media-Downloader Skill，实现主流流媒体网站的资源爬虫以及行业常用站点的资源爬虫（比如 Artstation、The Rookies 等），从而提高资源从检索到下载效率以及解决下载实效问题。",
+        ],
+      },
+    ],
+    openSourceRepos: [
+      {
+        name: "Video-Edit",
+        url: "https://github.com/zzh-editor/MAXs_VideoEditor",
+      },
+      {
+        name: "Video-Transcribe",
+        url: "https://github.com/zzh-editor/video-transcribe",
+      },
+      {
+        name: "Media-Downloader",
+        url: "https://github.com/zzh-editor/Media-downloader",
+      },
+      {
+        name: "Srt-Enhancer",
+        url: "https://github.com/zzh-editor/Srt-Enhancer",
       },
     ],
   },
@@ -237,6 +267,24 @@ export function ExperienceScaffoldSection() {
                       </li>
                     ))}
                   </ul>
+
+                  {/* AI 提效细分项下附带 4 个开源项目按钮（严格单排排列、紧凑尺寸、微型外链图标） */}
+                  {hl.label.includes("AI 提效") && exp.openSourceRepos && exp.openSourceRepos.length > 0 && (
+                    <div className="flex flex-nowrap items-center gap-1.5 pt-2 pl-3 overflow-x-auto no-scrollbar">
+                      {exp.openSourceRepos.map((repo) => (
+                        <a
+                          key={repo.name}
+                          href={repo.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 border border-neutral-200/90 dark:border-neutral-800 text-[11px] sm:text-xs font-medium hover:bg-neutral-50 dark:hover:bg-neutral-800/80 transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0 group whitespace-nowrap"
+                        >
+                          <span>{repo.name}</span>
+                          <ArrowUpRight className="size-2.5 text-neutral-400 group-hover:text-neutral-700 dark:group-hover:text-neutral-200 transition-colors shrink-0" strokeWidth={2.2} />
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -265,7 +313,7 @@ export function ExperienceScaffoldSection() {
               ))}
             </div>
           )}
-          {/* TodayWellSpent 专属入口：查看所有拍摄照片 */}
+          {/* TodayWellSpent 专属入口：查看所有拍摄照片（亮色下白底黑字、暗色下黑底白字） */}
           {exp.id === "today-well-spent" && (
             <div className="pt-2">
               <button
@@ -277,7 +325,7 @@ export function ExperienceScaffoldSection() {
                     })
                   );
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-xs font-medium hover:bg-neutral-800 dark:hover:bg-neutral-100 transition-all cursor-pointer shadow-2xs active:scale-95"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 border border-neutral-200/90 dark:border-neutral-800 text-xs font-medium hover:bg-neutral-50 dark:hover:bg-neutral-800/80 transition-all cursor-pointer shadow-2xs active:scale-95"
               >
                 <span>👀 看看照片</span>
               </button>

@@ -4,7 +4,7 @@ import { HeroIntro } from "@/components/hero/HeroIntro";
 import { InteractiveDayNightWindow } from "@/components/hero/InteractiveDayNightWindow";
 import { ExperienceScaffoldSection } from "@/components/sections/ExperienceScaffoldSection";
 import { ProjectsScaffoldSection } from "@/components/sections/ProjectsScaffoldSection";
-import { OpenSourceSection } from "@/components/sections/OpenSourceSection";
+import { SkillsSection } from "@/components/sections/SkillsSection";
 import { CrumpledPaperFooter } from "@/components/footer/CrumpledPaperFooter";
 
 export default function Home() {
@@ -26,11 +26,11 @@ export default function Home() {
         {/* 2. 项目 (35mm Film Strip) */}
         <ProjectsScaffoldSection />
 
-        {/* 3. 开源 (Open Source) */}
-        <OpenSourceSection />
+        {/* 3. 技能 (Skills - Resource Links Panel) */}
+        <SkillsSection />
       </main>
 
-      {/* 滚动至开源板块时滚入的折痕纸团及 Contact Profile 纸张 */}
+      {/* 滚动至底部技能板块时滚入的折痕纸团及 Contact Profile 纸张 */}
       <CrumpledPaperFooter />
     </div>
   );

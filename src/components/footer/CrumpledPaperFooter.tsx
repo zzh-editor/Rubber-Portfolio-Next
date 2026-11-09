@@ -83,22 +83,22 @@ export function CrumpledPaperFooter() {
   const [arrowTimerReady, setArrowTimerReady] = useState(false);
   const [copiedWeChat, setCopiedWeChat] = useState(false);
 
-  // 视口滚动检测：到达开源板块时纸团滚入；向上滚动脱离开源板块时纸团滚出
+  // 视口滚动检测：到达底部技能/开源板块时纸团滚入；向上滚动脱离板块时纸团滚出
   useEffect(() => {
     let ticking = false;
     const handleScroll = () => {
       if (!ticking) {
         requestAnimationFrame(() => {
-          const openSourceEl = document.getElementById("opensource");
-          if (!openSourceEl) {
+          const targetEl = document.getElementById("skills") || document.getElementById("opensource");
+          if (!targetEl) {
             ticking = false;
             return;
           }
 
-          const rect = openSourceEl.getBoundingClientRect();
+          const rect = targetEl.getBoundingClientRect();
           const viewportHeight = window.innerHeight;
 
-          // 当开源板块进入视口下部（距视口顶部 < 85%）且未完全滑出上方时展现
+          // 当板块进入视口下部（距视口顶部 < 85%）且未完全滑出上方时展现
           const shouldShow = rect.top < viewportHeight * 0.85 && rect.bottom > 80;
 
           setIsVisible(shouldShow);
