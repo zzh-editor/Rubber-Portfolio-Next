@@ -180,6 +180,20 @@ export function DualFilmAccordion({
     };
   }, [handleSelectMainCategory]);
 
+  // 各分类全量照片总数（动态计算，保持与素材数据实时同步）
+  const photoCounts = useMemo(() => {
+    let all = 0;
+    let tws = 0;
+    let personal = 0;
+    for (const proj of photoProjects) {
+      const len = proj.photos.length;
+      all += len;
+      if (proj.group === "tws") tws += len;
+      if (proj.group === "personal") personal += len;
+    }
+    return { all, tws, personal };
+  }, []);
+
   // 跑马灯无限循环列表
   const loopedVideos = [...videoItems, ...videoItems, ...videoItems];
   const loopedPhotos =
@@ -697,9 +711,9 @@ export function DualFilmAccordion({
                 */}
                 <div className="inline-flex items-center p-1 rounded-full bg-neutral-100 dark:bg-neutral-800/90 border border-neutral-200/80 dark:border-neutral-700/80 shrink-0 self-start mb-2 overflow-x-auto scrollbar-none max-w-full">
                   {[
-                    { id: "all" as const, label: "全部", count: 207 },
-                    { id: "tws" as const, label: "TodayWellSpent", count: 197 },
-                    { id: "personal" as const, label: "个人摄影", count: 10 },
+                    { id: "all" as const, label: "全部", count: photoCounts.all },
+                    { id: "tws" as const, label: "TodayWellSpent", count: photoCounts.tws },
+                    { id: "personal" as const, label: "个人摄影", count: photoCounts.personal },
                   ].map((cat) => {
                     const isActive = mainCategory === cat.id;
                     return (

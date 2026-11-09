@@ -33,7 +33,16 @@ export const photoProjects: PhotoProject[] = [
       "/images/photography/个人摄影/zzh.editor-photo-C3NODe8rOM--20240211_200505_624798165.jpg",
       "/images/photography/个人摄影/zzh.editor-photo-C3NOFXCL-LC-20240211_200520_624915845.jpg",
       "/images/photography/个人摄影/zzh.editor-photo-C8UaXHtJBsd-20240617_214417_622903080.jpg",
-      "/images/photography/个人摄影/zzh.editor-photo-CwFshqCviae-20230818_221740_623929650.jpg"
+      "/images/photography/个人摄影/zzh.editor-photo-CwFshqCviae-20230818_221740_623929650.jpg",
+      "/images/photography/个人摄影/微信图片_2026-11-07_180043_161.jpg",
+      "/images/photography/个人摄影/微信图片_2026-11-07_180108_688.jpg",
+      "/images/photography/个人摄影/微信图片_2026-11-07_180252_443.jpg",
+      "/images/photography/个人摄影/微信图片_2026-11-07_183018_286.jpg",
+      "/images/photography/个人摄影/微信图片_2026-11-07_183027_496.jpg",
+      "/images/photography/个人摄影/微信图片_2026-11-07_184025_954.jpg",
+      "/images/photography/个人摄影/微信图片_2026-11-07_184040_354.jpg",
+      "/images/photography/个人摄影/微信图片_2026-11-07_184058_567.jpg",
+      "/images/photography/个人摄影/微信图片_2026-11-07_184102_712.jpg"
     ]
   },
   {
