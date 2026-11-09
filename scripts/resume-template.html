@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>张壮浩 · 个人简历</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    html, body {
+      width: 210mm;
+      height: 297mm;
+      max-height: 297mm;
+      background-color: #FFFFFF;
+    }
+
+    body {
+      margin: 0 auto;
+      padding: 12mm 15mm 12mm 15mm;
+      color: #1f2937;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      font-size: 8.8pt;
+      line-height: 1.42;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* 顶栏：姓名、职位与核心指标 */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1.5px solid #3b82f6;
+      padding-bottom: 7px;
+    }
+
+    .header-left {
+      max-width: 63%;
+    }
+
+    .name-row {
+      display: flex;
+      align-items: baseline;
+      gap: 7px;
+    }
+
+    .name {
+      font-size: 20pt;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #0f172a;
+    }
+
+    .nickname {
+      font-size: 10.5pt;
+      font-weight: 600;
+      color: #3b82f6;
+      background: rgba(59, 130, 246, 0.08);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    .target-role {
+      font-size: 10pt;
+      font-weight: 700;
+      color: #1e293b;
+      margin-top: 2px;
+    }
+
+    .tagline {
+      font-size: 8.2pt;
+      color: #64748b;
+      margin-top: 1.5px;
+    }
+
+    .contact-row {
+      margin-top: 4px;
+      font-size: 8.2pt;
+      color: #475569;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+    }
+
+    .contact-row a {
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    /* 头部指标网格（4个手绘蓝微卡片） */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 5px;
+      width: 35%;
+    }
+
+    .metric-card {
+      background: rgba(59, 130, 246, 0.05);
+      border: 1px solid rgba(59, 130, 246, 0.22);
+      border-radius: 5px;
+      padding: 4px 7px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .metric-value {
+      font-size: 11pt;
+      font-weight: 800;
+      color: #3b82f6;
+      line-height: 1.1;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    .metric-label {
+      font-size: 7pt;
+      color: #475569;
+      font-weight: 500;
+      margin-top: 1px;
+    }
+
+    /* 个人简介模块 */
+    .summary-card {
+      background: #f8fafc;
+      border-left: 3px solid #3b82f6;
+      border-radius: 0 5px 5px 0;
+      padding: 5.5px 9px;
+      margin-top: 6px;
+      font-size: 8.2pt;
+      color: #334155;
+      line-height: 1.4;
+    }
+
+    /* 区块通用标题 */
+    .section-title {
+      font-size: 9.6pt;
+      font-weight: 700;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 6.5px;
+      margin-bottom: 4px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 2px;
+    }
+
+    .section-title::before {
+      content: "";
+      display: inline-block;
+      width: 3.5px;
+      height: 10px;
+      background: #3b82f6;
+      border-radius: 2px;
+    }
+
+    .section-title .stage-tags {
+      margin-left: auto;
+      font-size: 7.2pt;
+      font-weight: 500;
+      color: #3b82f6;
+      font-family: monospace;
+    }
+
+    /* 经历三段论脉络条 */
+    .timeline-summary {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(59, 130, 246, 0.04);
+      border: 1px dashed rgba(59, 130, 246, 0.22);
+      border-radius: 4px;
+      padding: 3.5px 7px;
+      margin-top: 5px;
+      margin-bottom: 5px;
+      font-size: 7.5pt;
+    }
+
+    .timeline-node {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      color: #475569;
+    }
+
+    .timeline-node strong {
+      color: #3b82f6;
+    }
+
+    .timeline-arrow {
+      color: #94a3b8;
+      font-size: 6.5pt;
+    }
+
+    /* 工作经历列表 */
+    .experience-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .job-item {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5px;
+    }
+
+    .job-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .job-company {
+      font-size: 9pt;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .job-role {
+      font-size: 8.2pt;
+      font-weight: 600;
+      color: #3b82f6;
+      margin-left: 5px;
+      background: rgba(59, 130, 246, 0.08);
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+
+    .job-period {
+      font-size: 7.5pt;
+      color: #64748b;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    .job-points {
+      padding-left: 11px;
+      margin-top: 1px;
+      list-style-type: disc;
+      color: #334155;
+      font-size: 8pt;
+      line-height: 1.38;
+    }
+
+    .job-points li {
+      margin-bottom: 1px;
+    }
+
+    .job-points li strong {
+      color: #0f172a;
+    }
+
+    /* 技能胶囊模块 */
+    .skills-container {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .skill-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 7.8pt;
+    }
+
+    .skill-category-label {
+      width: 65px;
+      font-weight: 700;
+      color: #0f172a;
+      font-size: 7.8pt;
+      flex-shrink: 0;
+    }
+
+    .pill-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3.5px 5.5px;
+    }
+
+    .skill-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 1.5px 6.5px;
+      border-radius: 10px;
+      font-size: 7.4pt;
+      font-weight: 500;
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      background: rgba(59, 130, 246, 0.06);
+      color: #2563eb;
+      line-height: 1.25;
+    }
+
+    .skill-pill.darker {
+      background: rgba(59, 130, 246, 0.12);
+      border-color: rgba(59, 130, 246, 0.35);
+      color: #1d4ed8;
+      font-weight: 600;
+    }
+
+    .skill-pill.muted {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      color: #475569;
+    }
+
+    /* 页脚标注栏 */
+    .footer-bar {
+      margin-top: 5px;
+      padding-top: 4px;
+      border-top: 1px solid #f1f5f9;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 7pt;
+      color: #94a3b8;
+    }
+
+    .footer-bar a {
+      color: #3b82f6;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div>
+    <!-- 头部基本信息与指标 -->
+    <header class="header">
+      <div class="header-left">
+        <div class="name-row">
+          <h1 class="name">张壮浩</h1>
+          <span class="nickname">Rubber · 橡胶</span>
+          <span class="target-role">视频团队负责人</span>
+        </div>
+        <div class="tagline">从镜头后的创作者，到团队前的管理者</div>
+        <div class="contact-row">
+          <span>电话：<strong>+86 19042941411</strong></span>
+          <span>邮箱：<a href="mailto:zzh.editor@gmail.com">zzh.editor@gmail.com</a></span>
+          <span>坐标：28岁 · 深圳</span>
+          <span>作品集：<a href="https://zzdeditor.pages.dev" target="_blank">zzdeditor.pages.dev ↗</a></span>
+        </div>
+      </div>
+
+      <!-- 四项核心指标微卡片 -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-value">8 年</div>
+          <div class="metric-label">从执行到管理</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">3 人</div>
+          <div class="metric-label">视频团队统筹</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">70%+</div>
+          <div class="metric-label">AI 技能转录提效</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">$0.05</div>
+          <div class="metric-label">单条AI切片开销</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- 个人优势模块 -->
+    <div class="summary-card">
+      <strong>个人优势：</strong>
+      从摄影工作室学徒到视频团队负责人，8 年时间完成从执行到管理的跨越。具备极高的信息检索与自驱学习能力，审美在线；擅长将创意转化为可执行的标准流程（SOP），让团队产出既有质量又有效率。精通 OBS 推流与商业布光体系，主导 Agent / Skill 自动化视频生产工具研发，实现从内容策划到 AI 提效交付的端到端闭环。
+    </div>
+
+    <!-- 发展脉络条 -->
+    <div class="timeline-summary">
+      <div class="timeline-node"><strong>2017—2022 执行期</strong>：婚礼与商业摄影全流程，咖啡直火烘焙，视听基本功沉淀</div>
+      <div class="timeline-arrow">➔</div>
+      <div class="timeline-node"><strong>2022—2024 专业期</strong>：品牌方从 0 搭建直播推流体系与全系产品人像拍摄</div>
+      <div class="timeline-arrow">➔</div>
+      <div class="timeline-node"><strong>2024—至今 管理期</strong>：制定团队 OKR 与视频 SOP，推进 AI 提效工具研发落地</div>
+    </div>
+
+    <!-- 工作经历 -->
+    <section>
+      <div class="section-title">
+        <span>工作经历</span>
+        <span class="stage-tags">EXPERIENCE · 2017 - 至今</span>
+      </div>
+
+      <div class="experience-list">
+        <!-- 1. 麦壳思游戏CG -->
+        <div class="job-item">
+          <div class="job-header">
+            <div>
+              <span class="job-company">麦壳思游戏CG · 游戏美术与留学机构</span>
+              <span class="job-role">视频团队负责人</span>
+            </div>
+            <span class="job-period">2024.05 — 至今</span>
+          </div>
+          <ul class="job-points">
+            <li>
+              <strong>团队 OKR 与跨部门机制</strong>：统筹 3 人视频组运作，制定季度成片量、直播场次与互动率指标，周例会追踪与月度复盘；建立运营、平面与教学对接链路，确保专业教学内容准确高效输出。
+            </li>
+            <li>
+              <strong>视频与直播标准化 SOP</strong>：制定成片交付 SOP 与参数标准（色彩空间、导出预设）；搭建 OBS 多平台推流与直播间视觉包装系统，确立从直播到录播切片制作的标准化流程。
+            </li>
+            <li>
+              <strong>AI 提效与 Agent Skill 研发</strong>：
+              ① 开发调优 <em>Video-Transcribe + SRT Enhancer</em> 技能，为 1-2 小时课程或英文讲座缩短 <strong>70% 以上</strong> 转录及术语校准耗时；
+              ② 研发 <em>Video-Edit</em> 技能，实现直播/课程切片自动对轨、动画图表与 B-Roll 生成，将单条视频 Token 开销压缩至 <strong>$0.05</strong>（ChatGPT 6.1 Luna 标准）；
+              ③ 开发 <em>Media-Downloader</em> 技能，实现主流及 ArtStation、The Rookies 等垂直站点的资源爬取与实效下载。
+            </li>
+          </ul>
+        </div>
+
+        <!-- 2. 此刻霓虹 -->
+        <div class="job-item">
+          <div class="job-header">
+            <div>
+              <span class="job-company">此刻霓虹（NEONOW） · 演出与俱乐部售票平台</span>
+              <span class="job-role">内容策划</span>
+            </div>
+            <span class="job-period">2024 — 2025</span>
+          </div>
+          <ul class="job-points">
+            <li>
+              <strong>选题分析与脚本策划</strong>：负责流媒体平台音乐科普视频策划，主导音乐人受众讨论，独立撰写深度视频脚本（代表作品《椎名林檎：苹果女王的音乐旅程》）。
+            </li>
+            <li>
+              <strong>素材检索与剪辑包装</strong>：统筹演出素材检索、卡点剪辑与视觉包装，兼顾专业深度与趣味性，丰富平台内容生态。
+            </li>
+          </ul>
+        </div>
+
+        <!-- 3. Today Well Spent -->
+        <div class="job-item">
+          <div class="job-header">
+            <div>
+              <span class="job-company">Today Well Spent · 都市健康生活方式品牌</span>
+              <span class="job-role">多媒体编辑</span>
+            </div>
+            <span class="job-period">2022.09 — 2024.05</span>
+          </div>
+          <ul class="job-points">
+            <li>
+              <strong>从 0 到 1 搭建直播体系</strong>：选型摄像头/麦克风/补光硬件，搭建 OBS 推流系统，设计产品特写/访谈/答疑 <strong>3 套标准化场景</strong>，统一片头动效、字幕条与产品卡片视觉。
+            </li>
+            <li>
+              <strong>全系产品与 Campaign 拍摄</strong>：独立执行全系列实体/联名产品静物与人像拍摄精修（积累 190+ 张精修图）；负责多天大型线下活动全流程跟拍，当天精修出图并剪辑活动回顾视频。
+            </li>
+          </ul>
+        </div>
+
+        <!-- 4. 独立摄影师 / 咖啡师 -->
+        <div class="job-item">
+          <div class="job-header">
+            <div>
+              <span class="job-company">独立摄影师 / 咖啡师 · 自由执业与学徒经历</span>
+              <span class="job-role">独立执行</span>
+            </div>
+            <span class="job-period">2017 — 2022</span>
+          </div>
+          <ul class="job-points">
+            <li>
+              <strong>视听底座与品牌沉淀</strong>：师从摄影工作室系统打牢商业摄影、摄像、灯光与剪辑基础；全流程独立承接婚礼与活动商业拍摄；自学咖啡直火烘焙与冲煮技术；独立运营公众号「198印象」。
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 技能与工具 -->
+    <section>
+      <div class="section-title">
+        <span>技能矩阵</span>
+        <span class="stage-tags">SKILLS & CAPABILITIES</span>
+      </div>
+
+      <div class="skills-container">
+        <div class="skill-row">
+          <span class="skill-category-label">视频与后期</span>
+          <div class="pill-wrap">
+            <span class="skill-pill darker">Adobe Premiere Pro</span>
+            <span class="skill-pill darker">Adobe After Effects</span>
+            <span class="skill-pill darker">DaVinci Resolve</span>
+            <span class="skill-pill">Final Cut Pro</span>
+            <span class="skill-pill darker">OBS 推流导播</span>
+            <span class="skill-pill">Photoshop</span>
+            <span class="skill-pill">LightRoom</span>
+            <span class="skill-pill">Capture One</span>
+            <span class="skill-pill muted">Cavalry (学习中)</span>
+            <span class="skill-pill muted">Blender (学习中)</span>
+          </div>
+        </div>
+
+        <div class="skill-row">
+          <span class="skill-category-label">AI / 自动化</span>
+          <div class="pill-wrap">
+            <span class="skill-pill darker">Agent Skill 架构调优</span>
+            <span class="skill-pill darker">OpenCode / Antigravity / Codex</span>
+            <span class="skill-pill">HyperFrames 视频代码化</span>
+            <span class="skill-pill">ASR 语音字幕流水线</span>
+            <span class="skill-pill">Python 媒体爬虫</span>
+            <span class="skill-pill">Markdown</span>
+          </div>
+        </div>
+
+        <div class="skill-row">
+          <span class="skill-category-label">管理与业务</span>
+          <div class="pill-wrap">
+            <span class="skill-pill darker">团队 OKR 制定与复盘</span>
+            <span class="skill-pill darker">视频生产 SOP</span>
+            <span class="skill-pill">跨部门协作机制</span>
+            <span class="skill-pill">单反 / 微单拍摄全流程</span>
+            <span class="skill-pill">商业影棚布光</span>
+            <span class="skill-pill">手持云台稳定器</span>
+            <span class="skill-pill muted">咖啡烘焙与冲煮</span>
+            <span class="skill-pill muted">C1 驾驶</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 底部标注栏 -->
+  <footer class="footer-bar">
+    <span>张壮浩 · 个人求职简历</span>
+    <span>在线交互作品集：<a href="https://zzdeditor.pages.dev">https://zzdeditor.pages.dev</a></span>
+    <span>A4 单页标准打印版 · 更新于 2026 年 11 月</span>
+  </footer>
+</body>
+</html>
